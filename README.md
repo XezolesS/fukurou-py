@@ -1,0 +1,2 @@
+# Fukurou
+Personal discord bot.
