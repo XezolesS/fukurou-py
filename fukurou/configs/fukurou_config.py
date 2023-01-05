@@ -4,14 +4,14 @@ import logging
 from os.path import exists
 
 class FukurouConfig:
-    def __init__(self, logger: logging.Logger):
-        self.FILE_NAME = "discord_token.json"
-        self.DEFAULT_FORMAT = {
-            "client_id": "INSERT_CLIENTID_HERE",
-            "permissions": "INSERT_PERMISSIONS_HERE",
-            "token": "INSERT_TOKEN_HERE"
-        }
+    FILE_NAME = "discord_token.json"
+    DEFAULT_FORMAT = {
+        "client_id": "INSERT_CLIENTID_HERE",
+        "permissions": "INSERT_PERMISSIONS_HERE",
+        "token": "INSERT_TOKEN_HERE"
+    }
 
+    def __init__(self, logger: logging.Logger):
         self.logger = logger
 
 
