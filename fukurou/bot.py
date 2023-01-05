@@ -13,7 +13,6 @@ class Fukurou(Bot):
         )
         
         super().load_extension("cogs.greetings")
-        super().load_extension("cogs.stats")
         
         self.token = token
         self.logger = logger
