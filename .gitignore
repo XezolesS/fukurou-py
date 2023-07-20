@@ -130,3 +130,6 @@ dmypy.json
 
 # API Key files
 *_token.json
+
+# Fukurou config files
+configs/

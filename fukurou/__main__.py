@@ -5,7 +5,7 @@ import json
 import os
 
 from . import fukuroubot as fbot
-from .configs.fukurou_config import FukurouConfig
+from . import configs
 
 if __name__ == "__main__":
     # Setup loggers
@@ -24,12 +24,8 @@ if __name__ == "__main__":
     logger.addHandler(log_console)
     logger.addHandler(log_file)
 
-    # Create api_discord.json file to store API keys
-    config = FukurouConfig(logger = logger)
-    config.init()
-
-    # Print invite link
-    print(config.getInviteLink())
+    # Get config handler
+    config = configs.get_config_handler()
 
     # Run bot
-    fbot.run(token = config.getToken(), logger = logger)
+    fbot.run(token = config.configs["fukurou"].token, logger = logger)
