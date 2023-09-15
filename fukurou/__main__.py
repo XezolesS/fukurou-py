@@ -27,7 +27,7 @@ if __name__ == '__main__':
     # Get config handler
     config = configs.get_config_handler()
     for cname in config.configs:
-        logger.info(f'Config {cname} has loaded.')
+        logger.info('Config %s has been loaded.', cname)
 
     # Run bot
     fbot.run(token = config.configs['fukurou'].token, logger = logger)

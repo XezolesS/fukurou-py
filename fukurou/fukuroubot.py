@@ -1,6 +1,6 @@
+from logging import Logger
 import discord
 from discord.ext.commands import Bot
-from logging import Logger
 
 from . import cogs
 
@@ -21,6 +21,6 @@ def run(token: str, logger: Logger):
 
     for cog in cogs.coglist:
         bot.load_extension(cog)
-        logger.info(f'Extension {cog} has been successfully loaded.')
+        logger.info('Extension %s has been successfully loaded.', cog)
 
     bot.run(token)
