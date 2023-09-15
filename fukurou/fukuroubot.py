@@ -11,14 +11,14 @@ class FukurouBot(Bot):
 
         super().__init__(
             intents = intents,
-            command_prefix = "!"
+            command_prefix = '!'
         )
 
         self.logger = logger
 
 def run(token: str, logger: Logger):
     bot = FukurouBot(logger)
-    
+
     for cog in cogs.coglist:
         bot.load_extension(cog)
         logger.info(f'Extension {cog} has been successfully loaded.')

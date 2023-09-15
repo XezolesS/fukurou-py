@@ -132,4 +132,4 @@ dmypy.json
 *_token.json
 
 # Fukurou config files
-configs/
+/configs/

@@ -5,7 +5,7 @@ from . import BaseConfig
 class ConfigHandler:
     @property
     def directory(self) -> str:
-        return "configs"
+        return 'configs'
 
     @property
     def configs(self) -> dict[str, BaseConfig]:
