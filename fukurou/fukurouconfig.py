@@ -14,6 +14,14 @@ class FukurouConfig(BaseConfig):
         ]
 
     @property
+    def default_values(self) -> dict[str, any]:
+        return {
+            'client_id': 'CLIENT_ID_HERE',
+            'permission': 'PERMISSION_HERE',
+            'token': 'TOKEN_HERE'
+        }
+
+    @property
     def client_id(self) -> str:
         return self.get_value('client_id')
 

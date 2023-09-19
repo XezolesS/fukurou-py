@@ -12,6 +12,12 @@ class ExchangeConfig(BaseConfig):
         ]
 
     @property
+    def default_values(self) -> dict[str, any]:
+        return {
+            'token_koreaexim': 'TOKEN HERE'
+        }
+
+    @property
     def token_koreaexim(self) -> str:
         return self.get_value('token_koreaexim')
 

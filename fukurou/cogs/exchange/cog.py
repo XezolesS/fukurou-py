@@ -13,8 +13,7 @@ class ExchangeCog(commands.Cog):
         self.__init_koreaexim()
 
     def __init_koreaexim(self):
-        config = configs.get_config_handler()
-        token = config.configs['exchange'].token_koreaexim
+        token = configs.get_config('exchange').token_koreaexim
         self.wrapper = KoreaExIm(token)
 
     @discord.slash_command()
