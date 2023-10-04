@@ -1,11 +1,11 @@
-from logging import Logger
 import discord
 from discord.ext.commands import Bot
 
 from . import cogs
+from .logging import logger
 
 class FukurouBot(Bot):
-    def __init__(self, logger: Logger):
+    def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
 
@@ -14,10 +14,8 @@ class FukurouBot(Bot):
             command_prefix = '!'
         )
 
-        self.logger = logger
-
-def run(token: str, logger: Logger):
-    bot = FukurouBot(logger)
+def run(token: str):
+    bot = FukurouBot()
 
     for cog in cogs.coglist:
         bot.load_extension(cog)
