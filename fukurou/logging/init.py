@@ -2,8 +2,9 @@ import logging
 import sys
 
 from . import data
+from .loghanlder import LogHandler
 
-formatter = logging.Formatter(data.LOG_FORMAT)
+formatter = logging.Formatter(data.LOG_FORMAT, data.TIME_FORMAT)
 
 def init_logger() -> logging.Logger:
     """
@@ -34,7 +35,10 @@ def init_file() -> logging.FileHandler:
     """
         Initialize a FileHandler for a logger.
     """
-    file_handler = logging.FileHandler(filename=data.FILE_NAME, encoding='utf-8', mode='w')
+    log_handler = LogHandler()
+    file = log_handler.create_next()
+
+    file_handler = logging.FileHandler(filename=file, encoding='utf-8', mode='w')
     file_handler.setFormatter(formatter)
 
     return file_handler

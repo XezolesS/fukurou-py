@@ -1,5 +1,3 @@
-import logging
-
 from . import BaseConfig
 
 class ConfigHandler:
@@ -11,8 +9,7 @@ class ConfigHandler:
     def configs(self) -> dict[str, BaseConfig]:
         return self.__configs
 
-    def __init__(self, logger: logging.Logger = None):
-        self.logger = logger
+    def __init__(self):
         self.__configs: list[str, BaseConfig] = dict()
 
     def add_config(self, config: BaseConfig):
