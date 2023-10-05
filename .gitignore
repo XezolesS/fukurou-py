@@ -133,3 +133,6 @@ dmypy.json
 
 # Fukurou config files
 /configs/
+
+# Fukurou log files
+/logs/
