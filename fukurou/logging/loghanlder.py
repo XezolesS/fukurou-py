@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
 
+from fukurou.configs import configs
+
 class LogHandler:
     """
         A class for handling log files.
@@ -11,30 +13,36 @@ class LogHandler:
         """
             The directory that logs to be stored.
         """
-        return 'logs'
+        return self.__directory
 
     @property
     def max_logs(self) -> int:
         """
             Maximum number of logs to be stored.
         """
-        return 10
+        return self.__max_logs
 
     @property
     def name_format(self) -> str:
         """
             Format string of the log file name.
         """
-        return '%(datetime)s_fukurou'
+        return self.__name_format
 
     @property
     def time_format(self) -> str:
         """
             Format string of the time for log file name.
         """
-        return "%Y-%m-%d_%H.%M.%S"
+        return self.__time_format
 
     def __init__(self):
+        log_config = configs.get_config('logging')
+        self.__directory = log_config.directory
+        self.__max_logs = log_config.max_logs
+        self.__name_format = log_config.file_name
+        self.__time_format = log_config.file_time
+
         # Create log directory if it doesn't exist.
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
@@ -55,15 +63,18 @@ class LogHandler:
             :return: Path of the created log file
             :rtype: str
         """
-        # Remove log file if max log count exceeded.
-        if len(self.__logs) == self.max_logs:
-            oldest = min(self.__logs, key=os.path.getctime)
-            os.remove(oldest)
-
+        # Create log file
         time = datetime.now()
         file_name = self.name_format % { 'datetime': time.strftime(self.time_format) }
         file_path = os.path.join(self.directory, file_name + '.log')
 
         open(file=file_path, mode='x', encoding='utf-8')
+
+        # Remove log file if max log count exceeded.
+        while len(self.__logs) >= self.max_logs:
+            oldest = min(self.__logs, key=os.path.getctime)
+
+            self.__logs.remove(oldest)
+            os.remove(oldest)
 
         return file_path
