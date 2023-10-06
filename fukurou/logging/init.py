@@ -9,7 +9,7 @@ def init_logger() -> logging.Logger:
         Initialize a Logger
     """
     logger = logging.getLogger('Fukurou')
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     log_config = configs.get_config('logging')
     formatter = logging.Formatter(log_config.log_format, log_config.log_time)
@@ -27,7 +27,7 @@ def init_stream(fmt: logging.Formatter) -> logging.StreamHandler:
         Initialize a StreamHandler for a logger.
     """
     stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(logging.INFO)
+    stream_handler.setLevel(logging.DEBUG)
     stream_handler.setFormatter(fmt=fmt)
 
     return stream_handler
@@ -40,6 +40,7 @@ def init_file(fmt: logging.Formatter) -> logging.FileHandler:
     file = log_handler.create_next()
 
     file_handler = logging.FileHandler(filename=file, encoding='utf-8', mode='w')
+    file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(fmt=fmt)
 
     return file_handler
