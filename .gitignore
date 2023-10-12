@@ -136,3 +136,6 @@ dmypy.json
 
 # Fukurou log files
 /logs/
+
+# Fukurou image files
+/images/
