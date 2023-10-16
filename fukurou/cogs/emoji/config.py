@@ -1,6 +1,7 @@
 import os
 
 from fukurou.configs import BaseConfig, add_config
+from fukurou.logging import logger
 
 class EmojiConfig(BaseConfig):
     @property
@@ -10,6 +11,7 @@ class EmojiConfig(BaseConfig):
     @property
     def keys(self) -> list[str]:
         return [
+            'expression'
             'database',
             'storage'
         ]
@@ -17,6 +19,11 @@ class EmojiConfig(BaseConfig):
     @property
     def default_values(self) -> dict[str, any]:
         return {
+            'expression': {
+                'pattern': '[a-zA-Z0-9_ -]+',
+                'opening': ';',
+                'closing': ';'
+            },
             'database': {
                 'type': 'sqlite',
                 'file': 'emoji.db',
@@ -27,6 +34,22 @@ class EmojiConfig(BaseConfig):
                 'directory': './images'
             }
         }
+
+    @property
+    def expression_opening(self) -> str:
+        return self.get_value('expression')['opening']
+
+    @property
+    def expression_closing(self) -> str:
+        return self.get_value('expression')['closing']
+
+    @property
+    def expression(self) -> str:
+        pattern = self.get_value('expression')['pattern']
+        opening = self.get_value('expression')['opening']
+        closing = self.get_value('expression')['closing']
+        
+        return f'^{opening}{pattern}{closing}$'
 
     @property
     def database_type(self) -> str:
@@ -53,3 +76,4 @@ class EmojiConfig(BaseConfig):
         return self.get_value('storage')['directory']
 
 add_config(EmojiConfig())
+ 

@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 
 from fukurou.logging import logger
+from .emojipareser import EmojiParser
 from .image import (
     ImageHandlers,
     ImageHandler
@@ -48,14 +49,12 @@ class EmojiCog(commands.Cog):
         if message.author.id == self.bot.user.id:
             return
 
-        # \([a-zA-Z0-9가-힣_-]+ 콘\)
-        # ^;[a-zA-Z0-9_ -]+;$
-        if not re.match('^\([a-zA-Z0-9가-힣_ -]+ 콘\)$', message.content):
+        image_name = EmojiParser.parse(text=message.content)
+        if image_name is None:
             return
 
         author = message.author
         guild_id = message.guild.id
-        image_name = message.content.removeprefix('(').removesuffix(' 콘)')
 
         emoji = self.image_handlers[guild_id].get_emoji(image_name)
         file = discord.File(fp=emoji.path, filename=emoji.file_name)
