@@ -1,24 +1,16 @@
 import os
 import sqlite3
 from datetime import datetime, timezone
-from typing import Any
 
 from fukurou.configs import configs
 from fukurou.logging import logger
+from fukurou.patterns import Singleton
 from fukurou.cogs.emoji.data import (
     Emoji,
     Tag,
     TagMap,
     TagRelation
 )
-
-class Singleton(type):
-    __instances = {}
-
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        if self not in self.__instances:
-            self.__instances[self] = super(Singleton, self).__call__(*args, **kwds)
-        return self.__instances[self]
 
 class EmojiSqlite(metaclass=Singleton):
     TABLE_EMOJI = 'emoji'
