@@ -1,13 +1,14 @@
 import re
 import discord
 from discord.ext import commands
-from typing import TypedDict
 
 from fukurou.logging import logger
-from .image import ImageHandler
+from .image import (
+    ImageHandlers,
+    ImageHandler
+)
 
 class EmojiCog(commands.Cog):
-
     emoji_commands = discord.SlashCommandGroup(
         name='emoji',
         description='Command group for managing custom emoji.'
@@ -18,11 +19,27 @@ class EmojiCog(commands.Cog):
         self.image_handlers = ImageHandlers()
 
     @emoji_commands.command()
-    async def upload(self, ctx):
-        await ctx.respond('Upload command')
+    async def upload(self, ctx: discord.ApplicationContext,
+                     name: str,
+                     file: discord.Attachment):
+        self.image_handlers[ctx.guild.id].save_image(name=name,
+                                                     uploader=ctx.author.id,
+                                                     file_url=file.url,
+                                                     ext=file.content_type)
+        uploaded = await file.to_file()
+        embed = discord.Embed(colour=discord.Color.green(),
+                              description=f'**{name}** is uploaded!')
+        embed.set_author(
+            name=ctx.author.display_name,
+            url=ctx.author.jump_url,
+            icon_url=ctx.author.display_avatar.url
+        )
+        embed.set_image(url="attachment://" + file.filename)
+
+        await ctx.respond(file=uploaded, embed=embed)
 
     @emoji_commands.command()
-    async def rename(self, ctx):
+    async def rename(self, ctx: discord.ApplicationContext):
         await ctx.respond('Rename command')
 
     @commands.Cog.listener('on_message')
@@ -31,10 +48,17 @@ class EmojiCog(commands.Cog):
         if message.author.id == self.bot.user.id:
             return
 
-        if not re.match('^;[a-zA-Z0-9_-]+;$', message.content):
+        # \([a-zA-Z0-9가-힣_-]+ 콘\)
+        # ^;[a-zA-Z0-9_ -]+;$
+        if not re.match('^\([a-zA-Z0-9가-힣_ -]+ 콘\)$', message.content):
             return
 
         author = message.author
+        guild_id = message.guild.id
+        image_name = message.content.removeprefix('(').removesuffix(' 콘)')
+
+        emoji = self.image_handlers[guild_id].get_emoji(image_name)
+        file = discord.File(fp=emoji.path, filename=emoji.file_name)
 
         embed = discord.Embed(colour=discord.Color.green())
         embed.set_author(
@@ -42,12 +66,9 @@ class EmojiCog(commands.Cog):
             url=author.jump_url,
             icon_url=author.display_avatar.url
         )
-        embed.add_field(
-            name='',
-            value=f"We're testing {message.content}"
-        )
+        embed.set_image(url="attachment://" + emoji.file_name)
 
-        await message.channel.send(embed=embed)
+        await message.channel.send(file=file, embed=embed)
         await message.delete()
 
     @commands.Cog.listener('on_ready')
@@ -58,7 +79,3 @@ class EmojiCog(commands.Cog):
     @commands.Cog.listener('on_guild_join')
     async def init_guild_emoji(self, guild: discord.Guild):
         self.image_handlers[guild.id] = ImageHandler(guild_id=guild.id)
-
-class ImageHandlers(TypedDict):
-    guild_id: int
-    handler: ImageHandler

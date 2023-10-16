@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 class Emoji:
@@ -24,6 +25,10 @@ class Emoji:
     @property
     def use_count(self) -> int:
         return self.__use_count
+    
+    @property
+    def file_name(self) -> str:
+        return os.path.basename(self.__path)
 
     def __init__(self,
                  guild_id: int,

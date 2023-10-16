@@ -1,1 +1,4 @@
-from .imagehandler import ImageHandler
+from .imagehandler import (
+    ImageHandlers,
+    ImageHandler
+)
