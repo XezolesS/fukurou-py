@@ -4,7 +4,6 @@ from discord.ext import commands
 
 from fukurou.logging import logger
 from .emojipareser import EmojiParser
-from .database.sqlite import EmojiSqlite
 from .exceptions import EmojiError
 from .image import (
     ImageHandlers,
@@ -38,9 +37,11 @@ class EmojiCog(commands.Cog):
             embed.color = discord.Color.red()
             embed.description = f'Failed to upload **{name}**'
             embed.add_field(
-                name='Error',
-                value=e.args
+                name=e.name,
+                value=e.message_backticked()
             )
+
+            logger.error(e.message_double_quoted())
         else:
             embed.color = discord.Color.green()
             embed.description = f'**{name}** is uploaded!'

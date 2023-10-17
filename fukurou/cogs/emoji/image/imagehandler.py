@@ -110,21 +110,36 @@ class ImageHandler:
         :raises EmojiFileSaveError: If an error occured while saving image file.
         :raises EmojiDatabaseError: If an error occured while saving emoji data to the database.
         """
+        logger.info("User(%d) uploading emoji: (Name: %s, FileUrl: %s, FileType: %s)",
+                    uploader,
+                    name,
+                    file_url,
+                    file_type)
+
         # Check name validity
         pattern = f'^{self.config.expression_pattern}$'
         if not re.match(pattern=pattern, string=name):
-            raise EmojiInvalidNameError(f'Name `{name}` is not matched with the pattern.')
+            raise EmojiInvalidNameError(
+                message='Name %s is not matched with the pattern.',
+                message_args=(name,)
+            )
 
         # Check for duplicate name
         database = sqlite.EmojiSqlite()
         emoji = database.get_emoji(guild_id=self.guild_id, name=name)
         if emoji is not None:
-            raise EmojiNameExistsError(f'Emoji `{name}` is already exists.')
+            raise EmojiNameExistsError(
+                message='Emoji %s is already exist.',
+                message_args=(name,)
+            )
 
         # Check if the file is image
         ext = self.__verify_filetype(file_type=file_type)
         if ext is None:
-            raise EmojiFileTypeError(f'*.{ext} is invalid file type for Emoji.')
+            raise EmojiFileTypeError(
+                message='*.%s is invalid file type for Emoji.',
+                message_args=(ext,)
+            )
 
         # Save image to the storage
         try:
@@ -133,22 +148,29 @@ class ImageHandler:
                 case 'local':
                     path = self.__save_local_image(file_url=file_url, ext=ext)
         except EmojiFileExistsError as e:
-            logger.error('Image "%s" is already exist in "%s"', e.file_name, e.directory)
-            raise e
+            raise EmojiFileExistsError(
+                message='Image %s is already exist in %s',
+                message_args=(e.file_name, e.directory)
+            ) from e
         except EmojiFileSaveError as e:
-            logger.error('Error occured while downloading file: "%s"', e.args)
-            raise e
-        else:
-            # Save emoji data to the database
-            try:
-                database.save_emoji(guild_id=self.guild_id,
-                                    name=name,
-                                    uploader=uploader,
-                                    path=path)
-            except EmojiDatabaseError as e:
-                logger.error('Error occured while saving emoji data: "%s"', e.args)
-                self.__delete_local_image(path=path)
-                raise e
+            raise EmojiFileSaveError(
+                message='Error occured while downloading file: %s',
+                message_args=(e.args,)
+            ) from e
+
+        # Save emoji data to the database
+        try:
+            database.save_emoji(guild_id=self.guild_id,
+                                name=name,
+                                uploader=uploader,
+                                path=path)
+        except EmojiDatabaseError as e:
+            self.__delete_local_image(path=path)
+
+            raise EmojiDatabaseError(
+                message='Error occured while saving emoji data: %s',
+                message_args=(e.args,)
+            ) from e
 
         logger.info('Emoji "%s" is saved at "%s"', name, path)
 
