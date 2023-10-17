@@ -143,3 +143,41 @@ class EmojiSqlite(metaclass=Singleton):
             created_at=data[4],
             use_count=data[5]
         )
+
+    def emoji_exists(self, guild_id: int, name: str) -> bool:
+        """
+        Check if emoji with a name exists.
+
+        :param int guild_id: Guild Id of the emoji.
+        :param str name: Name of the emoji.
+
+        :return: True if it exists, False if not.
+        :rtype: bool
+        """
+        return self.get_emoji(guild_id=guild_id, name=name) is not None
+
+    def update_emoji_name(self, guild_id: int, old_name: str, new_name: str) -> bool:
+        """
+        Rename a emoji which has a name of 'old_name' to 'new_name' of the guild.
+
+        :param int guild_id: Guild Id of the emoji.
+        :param str old_name: Name of the emoji to be changed.
+        :param str new_name: Name of the emoji to change.
+
+        :return: True if success, False if not.
+        :rtype: bool
+        """
+        query = f"""
+            UPDATE {self.TABLE_EMOJI} SET name=? WHERE guild_id=? AND name=?
+        """
+
+        self.__cursor.execute(query, (new_name, guild_id, old_name))
+        logger.debug('update_emoji_name() -> rowcount: %d', self.__cursor.rowcount)
+
+        # Update failed.
+        if self.__cursor.rowcount == 0:
+            return False
+
+        self.__connection.commit()
+
+        return True

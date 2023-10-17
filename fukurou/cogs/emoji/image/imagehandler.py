@@ -91,6 +91,12 @@ class ImageHandler:
         database = sqlite.EmojiSqlite()
         return database.get_emoji(guild_id=self.guild_id, name=name)
 
+    def rename_emoji(self, old_name: str, new_name: str):
+        database = sqlite.EmojiSqlite()
+        return database.update_emoji_name(guild_id=self.guild_id,
+                                          old_name=old_name,
+                                          new_name=new_name)
+
 class ImageHandlers(TypedDict):
     guild_id: int
     handler: ImageHandler
