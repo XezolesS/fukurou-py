@@ -94,6 +94,9 @@ class EmojiCog(commands.Cog):
         guild_id = message.guild.id
 
         emoji = self.image_handlers[guild_id].get_emoji(image_name)
+        if emoji is None:
+            return
+
         file = discord.File(fp=emoji.path, filename=emoji.file_name)
 
         embed = discord.Embed(colour=discord.Color.green())
