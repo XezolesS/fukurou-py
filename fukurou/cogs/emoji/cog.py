@@ -105,7 +105,7 @@ class EmojiCog(commands.Cog):
             url=author.jump_url,
             icon_url=author.display_avatar.url
         )
-        embed.set_image(url="attachment://" + emoji.file_name)
+        embed.set_image(url=f'attachment://{emoji.file_name}')
 
         await message.channel.send(file=file, embed=embed)
         await message.delete()

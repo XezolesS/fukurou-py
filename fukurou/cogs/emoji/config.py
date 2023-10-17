@@ -22,7 +22,8 @@ class EmojiConfig(BaseConfig):
             'expression': {
                 'pattern': '[a-zA-Z0-9_ -]+',
                 'opening': ';',
-                'closing': ';'
+                'closing': ';',
+                'ignore_spaces': True
             },
             'database': {
                 'type': 'sqlite',
@@ -54,6 +55,10 @@ class EmojiConfig(BaseConfig):
         closing = self.get_value('expression')['closing']
 
         return f'^{opening}{pattern}{closing}$'
+
+    @property
+    def ignore_spaces(self) -> bool:
+        return self.get_value('expression')['ignore_spaces']
 
     @property
     def database_type(self) -> str:

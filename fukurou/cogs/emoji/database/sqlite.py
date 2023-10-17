@@ -133,8 +133,13 @@ class EmojiSqlite(metaclass=Singleton):
         :return: Emoji object, None if there's no match.
         :rtype: Emoji | None
         """
+        param_name = 'name'
+        if configs.get_config('emoji').ignore_spaces is True:
+            param_name = "replace(name, ' ', '')"
+            name = name.replace(' ', '')
+
         query = f"""
-            SELECT * FROM {self.TABLE_EMOJI} WHERE guild_id=? AND name=?
+            SELECT * FROM {self.TABLE_EMOJI} WHERE guild_id=? AND {param_name}=?
         """
 
         result = self.__cursor.execute(query, (guild_id, name))
@@ -178,8 +183,13 @@ class EmojiSqlite(metaclass=Singleton):
         :return: True if success, False if not.
         :rtype: bool
         """
+        param_name = 'name'
+        if configs.get_config('emoji').ignore_spaces is True:
+            param_name = "replace(name, ' ', '')"
+            old_name = old_name.replace(' ', '')
+
         query = f"""
-            UPDATE {self.TABLE_EMOJI} SET name=? WHERE guild_id=? AND name=?
+            UPDATE {self.TABLE_EMOJI} SET name=? WHERE guild_id=? AND {param_name}=?
         """
 
         self.__cursor.execute(query, (new_name, guild_id, old_name))
