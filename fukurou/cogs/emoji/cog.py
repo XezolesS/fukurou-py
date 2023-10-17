@@ -1,8 +1,12 @@
-import re
 import discord
-from discord.ext import commands
+from discord import Guild
+from discord.ext import (
+    commands,
+    pages
+)
 
 from fukurou.logging import logger
+from .data import Emoji
 from .emojipareser import EmojiParser
 from .exceptions import EmojiError
 from .image import (
@@ -80,6 +84,13 @@ class EmojiCog(commands.Cog):
 
         await ctx.respond(file=file, embed=embed)
 
+    @emoji_commands.command()
+    async def list(self, ctx: discord.ApplicationContext):
+        emoji_list = self.image_handlers[ctx.guild.id].emoji_list()
+        emoji_page = EmojiListPage(guild=ctx.guild, emoji_list=emoji_list)
+
+        await emoji_page.respond(ctx.interaction, ephemeral=False)
+
     @commands.Cog.listener('on_message')
     async def on_emoji(self, message: discord.Message):
         # Filter message from itself
@@ -118,3 +129,52 @@ class EmojiCog(commands.Cog):
     @commands.Cog.listener('on_guild_join')
     async def init_guild_emoji(self, guild: discord.Guild):
         self.image_handlers[guild.id] = ImageHandler(guild_id=guild.id)
+
+class EmojiListPage(pages.Paginator):
+    def __init__(self, guild: Guild, emoji_list: list[Emoji], **kwargs):
+        self.guild = guild
+        super().__init__(pages=self.__build_pages(emoji_list=emoji_list), **kwargs)
+
+        self.custom_buttons = [
+            pages.PaginatorButton(
+                'begin',
+                label = '⯬',
+                style = discord.ButtonStyle.green
+            ),
+            pages.PaginatorButton(
+                'previous',
+                label = '🠜',
+                style = discord.ButtonStyle.green
+            ),
+            pages.PaginatorButton(
+                'page_indicator',
+                style = discord.ButtonStyle.gray,
+                disabled = True
+            ),
+            pages.PaginatorButton(
+                'next',
+                label='🠞',
+                style = discord.ButtonStyle.green
+            ),
+            pages.PaginatorButton(
+                'end',
+                label='⯮',
+                style=discord.ButtonStyle.green
+            ),
+        ]
+
+    def __build_pages(self, emoji_list: list[Emoji]):
+        emoji_pages = []
+        for count, emoji in enumerate(emoji_list, start = 1):
+            if count % 10 == 1:
+                current_embed = discord.Embed(title = f'Emoji List')
+                emoji_pages.append(current_embed)
+
+            uploader = self.guild.get_member(emoji.uploader_id)
+            current_embed.add_field(
+                name = '',
+                value = f'**{count:02d}.** {emoji.name} (Uploaded by {uploader.display_name})',
+                inline = False
+            )
+
+        return emoji_pages

@@ -202,3 +202,33 @@ class EmojiSqlite(metaclass=Singleton):
         self.__connection.commit()
 
         return True
+
+    def emoji_list(self, guild_id: int) -> list[Emoji]:
+        """
+        Retrieve list of emojis of the guild.
+
+        :param guild_id: Guild Id to search.
+        :type guild_id: int
+
+        :return: List of Emoji objects.
+        :rtype: list[Emoji]
+        """
+        query = f"""
+            SELECT * FROM {self.TABLE_EMOJI} WHERE guild_id=? ORDER BY name
+        """
+
+        result = self.__cursor.execute(query, (guild_id,))
+        data = result.fetchall()
+
+        emoji_list = []
+        for t in data:
+            emoji_list.append(Emoji(
+                guild_id=t[0],
+                name=t[1],
+                uploader_id=t[2],
+                path=t[3],
+                created_at=t[4],
+                use_count=t[5]
+            ))
+
+        return emoji_list
