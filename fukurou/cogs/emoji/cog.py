@@ -5,6 +5,7 @@ from discord.ext import commands
 from fukurou.logging import logger
 from .emojipareser import EmojiParser
 from .database.sqlite import EmojiSqlite
+from .exceptions import EmojiError
 from .image import (
     ImageHandlers,
     ImageHandler
@@ -25,19 +26,32 @@ class EmojiCog(commands.Cog):
                      ctx: discord.ApplicationContext,
                      name: str,
                      file: discord.Attachment):
-        self.image_handlers[ctx.guild.id].save_image(name=name,
-                                                     uploader=ctx.author.id,
-                                                     file_url=file.url,
-                                                     ext=file.content_type)
-        uploaded = await file.to_file()
-        embed = discord.Embed(colour=discord.Color.green(),
-                              description=f'**{name}** is uploaded!')
-        embed.set_author(
-            name=ctx.author.display_name,
-            url=ctx.author.jump_url,
-            icon_url=ctx.author.display_avatar.url
-        )
-        embed.set_image(url=f'attachment://{file.filename}')
+        embed = discord.Embed()
+        uploaded = None
+
+        try:
+            self.image_handlers[ctx.guild.id].save_emoji(name=name,
+                                                         uploader=ctx.author.id,
+                                                         file_url=file.url,
+                                                         file_type=file.content_type)
+        except EmojiError as e:
+            embed.color = discord.Color.red()
+            embed.description = f'Failed to upload **{name}**'
+            embed.add_field(
+                name='Error',
+                value=e.args
+            )
+        else:
+            embed.color = discord.Color.green()
+            embed.description = f'**{name}** is uploaded!'
+            embed.set_author(
+                name=ctx.author.display_name,
+                url=ctx.author.jump_url,
+                icon_url=ctx.author.display_avatar.url
+            )
+            embed.set_image(url=f'attachment://{file.filename}')
+
+            uploaded = await file.to_file()
 
         await ctx.respond(file=uploaded, embed=embed)
 

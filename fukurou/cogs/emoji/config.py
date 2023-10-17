@@ -36,6 +36,10 @@ class EmojiConfig(BaseConfig):
         }
 
     @property
+    def expression_pattern(self) -> str:
+        return self.get_value('expression')['pattern']
+
+    @property
     def expression_opening(self) -> str:
         return self.get_value('expression')['opening']
 
@@ -48,7 +52,7 @@ class EmojiConfig(BaseConfig):
         pattern = self.get_value('expression')['pattern']
         opening = self.get_value('expression')['opening']
         closing = self.get_value('expression')['closing']
-        
+
         return f'^{opening}{pattern}{closing}$'
 
     @property

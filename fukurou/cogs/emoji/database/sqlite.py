@@ -11,6 +11,7 @@ from fukurou.cogs.emoji.data import (
     TagMap,
     TagRelation
 )
+from fukurou.cogs.emoji.exceptions import EmojiDatabaseError
 
 class EmojiSqlite(metaclass=Singleton):
     TABLE_EMOJI = 'emoji'
@@ -107,13 +108,20 @@ class EmojiSqlite(metaclass=Singleton):
             INSERT INTO {self.TABLE_EMOJI} VALUES (?, ?, ?, ?, ?, ?)
         """
 
-        self.__cursor.execute(query, (guild_id,
-                                    name,
-                                    uploader,
-                                    path,
-                                    datetime.now(timezone.utc),
-                                    0))
-        self.__connection.commit()
+        entry = (
+            guild_id,
+            name,
+            uploader,
+            path,
+            datetime.now(timezone.utc),
+            0
+        )
+
+        try:
+            self.__cursor.execute(query, entry)
+            self.__connection.commit()
+        except sqlite3.Error as e:
+            raise EmojiDatabaseError() from e
 
     def get_emoji(self, guild_id: int, name: str) -> Emoji | None:
         """
@@ -160,9 +168,12 @@ class EmojiSqlite(metaclass=Singleton):
         """
         Rename a emoji which has a name of 'old_name' to 'new_name' of the guild.
 
-        :param int guild_id: Guild Id of the emoji.
-        :param str old_name: Name of the emoji to be changed.
-        :param str new_name: Name of the emoji to change.
+        :param guild_id: Guild Id of the emoji.
+        :type guild_id: int
+        :param old_name: Old name of the emoji.
+        :type old_name: str
+        :param new_name: New name of the emoji.
+        :type new_name: str
 
         :return: True if success, False if not.
         :rtype: bool
