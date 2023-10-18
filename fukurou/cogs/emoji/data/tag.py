@@ -5,8 +5,8 @@ class Tag:
 
     @property
     def name(self) -> str:
-        return self.__name
+        return self.__tag_name
 
-    def __init__(self, guild_id: int, name: str):
+    def __init__(self, guild_id: int, tag_name: str):
         self.__guild_id = guild_id
-        self.__name = name
+        self.__tag_name = tag_name

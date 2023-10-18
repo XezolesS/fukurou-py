@@ -131,7 +131,7 @@ class ImageHandler:
 
         # Check for duplicate name
         database = sqlite.EmojiSqlite()
-        emoji = database.get_emoji(guild_id=self.guild_id, name=name)
+        emoji = database.get_emoji(guild_id=self.guild_id, emoji_name=name)
         if emoji is not None:
             raise EmojiNameExistsError(
                 message='Emoji %s is already exist.',
@@ -171,9 +171,9 @@ class ImageHandler:
         # Save emoji data to the database
         try:
             database.save_emoji(guild_id=self.guild_id,
-                                name=name,
-                                uploader=uploader,
-                                path=path)
+                                emoji_name=name,
+                                uploader_id=uploader,
+                                file_path=path)
         except EmojiDatabaseError as e:
             self.__delete_local_image(path=path)
 
@@ -195,7 +195,7 @@ class ImageHandler:
         :rtype: Emoji | None
         """
         database = sqlite.EmojiSqlite()
-        return database.get_emoji(guild_id=self.guild_id, name=name)
+        return database.get_emoji(guild_id=self.guild_id, emoji_name=name)
 
     def rename_emoji(self, old_name: str, new_name: str):
         """

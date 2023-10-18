@@ -75,7 +75,7 @@ class EmojiCog(commands.Cog):
             embed.description = f'Emoji `{old_name}` is now `{new_name}`!'
 
             emoji = self.image_handlers[ctx.guild.id].get_emoji(new_name)
-            file = discord.File(fp=emoji.path, filename=emoji.file_name)
+            file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
 
             embed.set_image(url=f'attachment://{file.filename}')
         else:
@@ -108,7 +108,7 @@ class EmojiCog(commands.Cog):
         if emoji is None:
             return
 
-        file = discord.File(fp=emoji.path, filename=emoji.file_name)
+        file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
 
         embed = discord.Embed(colour=discord.Color.green())
         embed.set_author(
@@ -173,7 +173,7 @@ class EmojiListPage(pages.Paginator):
             uploader = self.guild.get_member(emoji.uploader_id)
             current_embed.add_field(
                 name = '',
-                value = f'**{count:02d}.** {emoji.name} (Uploaded by {uploader.display_name})',
+                value = f'**{count:02d}.** {emoji.emoji_name} (Uploaded by {uploader.display_name})',
                 inline = False
             )
 
