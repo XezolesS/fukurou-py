@@ -41,7 +41,7 @@ class EmojiCog(commands.Cog):
             embed.color = discord.Color.red()
             embed.description = f'Failed to upload **{name}**'
             embed.add_field(
-                name=e.name,
+                name=e.desc,
                 value=e.message_backticked()
             )
 
