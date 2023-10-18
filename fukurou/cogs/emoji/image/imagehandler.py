@@ -10,6 +10,7 @@ from fukurou.cogs.emoji.exceptions import (
     EmojiNameExistsError,
     EmojiDatabaseError,
     EmojiFileExistsError,
+    EmojiFileDownloadError,
     EmojiFileSaveError,
     EmojiFileTypeError,
     EmojiInvalidNameError
@@ -45,14 +46,17 @@ class ImageHandler:
 
         guild_path = os.path.join(abs_path, str(self.guild_id))
         if not os.path.exists(guild_path):
-            logger.info('Guild image directory created at: %s', guild_path)
             os.mkdir(guild_path)
+            logger.info('Guild image directory created at: %s', guild_path)
 
         self.directory = guild_path
         logger.info('Image directory for guild(%d) is set to "%s"', self.guild_id, guild_path)
 
     def __verify_filetype(self, file_type: str) -> str | None:
-        return file_type.removeprefix('image/') if file_type in self.ALLOWED_FILETYPES else None
+        if file_type not in self.ALLOWED_FILETYPES:
+            return None
+
+        return file_type.removeprefix('image/')
 
     def __save_local_image(self, file_url: str, ext: str) -> str:
         # Download file from url
@@ -62,9 +66,9 @@ class ImageHandler:
 
             image = response.content
         except requests.exceptions.HTTPError as e:
-            raise EmojiFileSaveError(e.args) from e
+            raise EmojiFileDownloadError(e.args) from e
         except requests.exceptions.RequestException as e:
-            raise EmojiFileSaveError(e.args) from e
+            raise EmojiFileDownloadError(e.args) from e
 
         # Build md5 checksum of a file
         checksum = hashlib.md5(image).hexdigest()
@@ -107,6 +111,7 @@ class ImageHandler:
         :raises EmojiDuplicateNameError: If given name is already exist in the database.
         :raises EmojiFileTypeError: If file type is not supported.
         :raises EmojiFileExistsError: If image file is already exist.
+        :raises EmojiFileDownloadError: If an error occured while downloading image file.
         :raises EmojiFileSaveError: If an error occured while saving image file.
         :raises EmojiDatabaseError: If an error occured while saving emoji data to the database.
         """
@@ -152,10 +157,15 @@ class ImageHandler:
                 message='Image %s is already exist in %s',
                 message_args=(e.file_name, e.directory)
             ) from e
+        except EmojiFileDownloadError as e:
+            raise EmojiFileDownloadError(
+                e.args,
+                message='Error occured while downloading file'
+            ) from e
         except EmojiFileSaveError as e:
             raise EmojiFileSaveError(
-                message='Error occured while downloading file: %s',
-                message_args=(e.args,)
+                e.args,
+                message='Error occured while saving file'
             ) from e
 
         # Save emoji data to the database

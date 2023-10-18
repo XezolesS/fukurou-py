@@ -1,32 +1,52 @@
 from typing import Tuple
 
 class EmojiError(Exception):
+    @property
+    def desc(self) -> str:
+        """
+        Short description of the error.
+        """
+        return 'Emoji Error'
+
     def __init__(self, *args: object, message: str = None, message_args: Tuple = None):
         super().__init__(*args)
 
-        self.name = "Emoji Error"
         self.message = message
         self.message_args = message_args
 
     def message_double_quoted(self) -> str:
+        """
+        Retrieve the formatted message with arguments enclosed by double-qoutes.
+
+        :return: Formatted message. 
+        :rtype: str
+        """
         return self.message.replace('%s', '"%s"') % (self.message_args)
 
     def message_backticked(self) -> str:
+        """
+        Retrieve the formatted message with arguments enclosed by backticks.
+
+        :return: Formatted message. 
+        :rtype: str
+        """
         return self.message.replace('%s', '`%s`') % (self.message_args)
 
 class EmojiDatabaseError(EmojiError):
-    def __init__(self, *args: object, message: str = None, message_args: Tuple = None):
-        super().__init__(*args, message=message, message_args=message_args)
-
-        self.name = "Database Error"
+    @property
+    def desc(self) -> str:
+        return 'Database Operation Failed'
 
 class EmojiNameExistsError(EmojiError):
-    def __init__(self, *args: object, message: str = None, message_args: Tuple = None):
-        super().__init__(*args, message=message, message_args=message_args)
-
-        self.name = "Name Already Exists"
+    @property
+    def desc(self) -> str:
+        return 'Name Already Exists'
 
 class EmojiFileExistsError(EmojiError):
+    @property
+    def desc(self) -> str:
+        return 'File Already Exists'
+
     def __init__(self,
                  *args: object,
                  message: str = None,
@@ -35,24 +55,25 @@ class EmojiFileExistsError(EmojiError):
                  directory: str = None):
         super().__init__(*args, message=message, message_args=message_args)
 
-        self.name = "File Already Exists"
         self.file_name = file_name
         self.directory = directory
 
-class EmojiFileSaveError(EmojiError):
-    def __init__(self, *args: object, message: str = None, message_args: Tuple = None):
-        super().__init__(*args, message=message, message_args=message_args)
+class EmojiFileDownloadError(EmojiError):
+    @property
+    def desc(self) -> str:
+        return 'Failed to Download File'
 
-        self.name = "File Save Error"
+class EmojiFileSaveError(EmojiError):
+    @property
+    def desc(self) -> str:
+        return 'Failed to Save File'
 
 class EmojiFileTypeError(EmojiError):
-    def __init__(self, *args: object, message: str = None, message_args: Tuple = None):
-        super().__init__(*args, message=message, message_args=message_args)
-
-        self.name = "Invalid File Type"
+    @property
+    def desc(self) -> str:
+        return 'Invalid File Type'
 
 class EmojiInvalidNameError(EmojiError):
-    def __init__(self, *args: object, message: str = None, message_args: Tuple = None):
-        super().__init__(*args, message=message, message_args=message_args)
-
-        self.name = "Invalid Name"
+    @property
+    def desc(self) -> str:
+        return 'Invalid Name Format'
