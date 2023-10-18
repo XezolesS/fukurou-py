@@ -14,6 +14,7 @@ from fukurou.cogs.emoji.data import (
 from fukurou.cogs.emoji.exceptions import EmojiDatabaseError
 
 class EmojiSqlite(metaclass=Singleton):
+    TABLE_SCRIPT_PATH = './fukurou/cogs/emoji/database/script/sqlite_table_init.sql'
     TABLE_EMOJI = 'emoji'
     TABLE_TAG = 'tag'
     TABLE_TAGMAP = 'tagmap'
@@ -32,68 +33,24 @@ class EmojiSqlite(metaclass=Singleton):
         self.__cursor = self.__connection.cursor()
 
     def __init_tables(self):
-        self.__create_emoji_table()
-        self.__create_tag_table()
-        self.__create_tagmap_table()
-        self.__create_tag_relation_table()
+        logger.info('Initialize emoji database.')
 
-    def __create_emoji_table(self):
-        logger.info('Initializing table %s in %s', self.TABLE_EMOJI, self.__db_path)
-        query = f"""
-        CREATE TABLE IF NOT EXISTS {self.TABLE_EMOJI} (
-            guild_id INTEGER,
-            name TEXT,
-            uploader_id INTEGER NOT NULL,
-            path TEXT NOT NULL,
-            created_at DATETIME,
-            use_count INT,
-            PRIMARY KEY (guild_id, name)
-        );
-        """
+        try:
+            with open(self.TABLE_SCRIPT_PATH, 'r', encoding='utf8') as file:
+                script = ''.join(file.readlines())
+                self.__cursor.executescript(script)
+        except IOError as e:
+            logger.error('Error occured while reading initialization script for emoji databse: %s',
+                         e.strerror)
 
-        self.__cursor.execute(query)
+            return
+        except sqlite3.DatabaseError as e:
+            logger.error('Error occured while executing script for emoji databse: %s',
+                         e.args)
 
-    def __create_tag_table(self):
-        logger.info('Initializing table %s in %s', self.TABLE_TAG, self.__db_path)
-        query = f"""
-        CREATE TABLE IF NOT EXISTS {self.TABLE_TAG} (
-            guild_id INTEGER,
-            name TEXT,
-            PRIMARY KEY (guild_id, name)
-        );
-        """
+            return
 
-        self.__cursor.execute(query)
-
-    def __create_tagmap_table(self):
-        logger.info('Initializing table %s in %s', self.TABLE_TAGMAP, self.__db_path)
-        query = f"""
-        CREATE TABLE IF NOT EXISTS {self.TABLE_TAGMAP} (
-            guild_id INTEGER,
-            emoji_name TEXT,
-            tag_name TEXT,
-            FOREIGN KEY (guild_id) REFERENCES tag(guild_id),
-            FOREIGN KEY (emoji_name) REFERENCES emoji(name),
-            FOREIGN KEY (tag_name) REFERENCES tag(name)
-        );
-        """
-
-        self.__cursor.execute(query)
-
-    def __create_tag_relation_table(self):
-        logger.info('Initializing table %s in %s', self.TABLE_TAG_RELATION, self.__db_path)
-        query = f"""
-        CREATE TABLE IF NOT EXISTS {self.TABLE_TAG_RELATION} (
-            guild_id INTEGER,
-            tag_name TEXT,
-            parent_name TEXT,
-            FOREIGN KEY (guild_id) REFERENCES tag(guild_id),
-            FOREIGN KEY (tag_name) REFERENCES tag(name),
-            FOREIGN KEY (parent_name) REFERENCES tag(name)
-        );
-        """
-
-        self.__cursor.execute(query)
+        logger.info('Successfully initialize emoji database.')
 
     def save_emoji(self, guild_id: int, name: str, uploader: str, path: str):
         """
