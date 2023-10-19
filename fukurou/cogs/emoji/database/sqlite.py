@@ -97,7 +97,7 @@ class EmojiSqlite(metaclass=Singleton):
         param_emoji_name = 'emoji_name'
         if configs.get_config('emoji').ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
-            old_name = old_name.replace(' ', '')
+            emoji_name = emoji_name.replace(' ', '')
 
         query = f'DELETE FROM emoji WHERE guild_id=? AND {param_emoji_name}=?'
 
