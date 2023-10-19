@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import discord
 from discord import Guild
 from discord.ext import (
@@ -137,12 +138,12 @@ class EmojiListPage(pages.Paginator):
 
         self.custom_buttons = [
             pages.PaginatorButton(
-                'begin',
+                'first',
                 label = '⯬',
                 style = discord.ButtonStyle.green
             ),
             pages.PaginatorButton(
-                'previous',
+                'prev',
                 label = '🠜',
                 style = discord.ButtonStyle.green
             ),
@@ -157,23 +158,32 @@ class EmojiListPage(pages.Paginator):
                 style = discord.ButtonStyle.green
             ),
             pages.PaginatorButton(
-                'end',
+                'last',
                 label='⯮',
                 style=discord.ButtonStyle.green
             ),
         ]
 
     def __build_pages(self, emoji_list: list[Emoji]):
+        emoji_count = len(emoji_list)
+
         emoji_pages = []
-        for count, emoji in enumerate(emoji_list, start = 1):
-            if count % 10 == 1:
-                current_embed = discord.Embed(title = f'Emoji List')
-                emoji_pages.append(current_embed)
+        for index, emoji in enumerate(emoji_list):
+            # Create new embed page
+            if index % 10 == 0:
+                embed = discord.Embed(title = f'Emoji List ({(index//10 + 1) * 10}/{emoji_count})')
+                emoji_pages.append(embed)
 
             uploader = self.guild.get_member(emoji.uploader_id)
-            current_embed.add_field(
-                name = '',
-                value = f'**{count:02d}.** {emoji.emoji_name} (Uploaded by {uploader.display_name})',
+            uploader = uploader.mention if uploader is not None else '*<Unknown>*'
+
+            local_tz = datetime.now().tzinfo
+            created_at = emoji.created_at.astimezone(tz=local_tz).strftime('%Y/%m/%d %H:%M:%S')
+
+            # Add emoji info
+            embed.add_field(
+                name = f':small_blue_diamond: {emoji.emoji_name}',
+                value = f'Uploaded by {uploader} at `{created_at}`',
                 inline = False
             )
 

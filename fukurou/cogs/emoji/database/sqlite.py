@@ -95,13 +95,7 @@ class EmojiSqlite(metaclass=Singleton):
         if data is None:
             return None
 
-        return Emoji(
-            guild_id=data[0],
-            emoji_name=data[1],
-            uploader_id=data[2],
-            file_path=data[3],
-            created_at=data[4]
-        )
+        return Emoji.from_entry(data)
 
     def emoji_exists(self, guild_id: int, emoji_name: str) -> bool:
         """
@@ -164,12 +158,6 @@ class EmojiSqlite(metaclass=Singleton):
 
         emoji_list = []
         for t in data:
-            emoji_list.append(Emoji(
-                guild_id=t[0],
-                emoji_name=t[1],
-                uploader_id=t[2],
-                file_path=t[3],
-                created_at=t[4]
-            ))
+            emoji_list.append(Emoji.from_entry(t))
 
         return emoji_list
