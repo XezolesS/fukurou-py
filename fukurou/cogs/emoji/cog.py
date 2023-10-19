@@ -30,6 +30,9 @@ class EmojiCog(commands.Cog):
                   ctx: discord.ApplicationContext,
                   name: str,
                   file: discord.Attachment):
+        # This task can take longer than 3 seconds
+        await ctx.defer()
+
         try:
             self.image_handlers[ctx.guild.id].save_emoji(name=name,
                                                          uploader=ctx.author.id,
@@ -63,7 +66,7 @@ class EmojiCog(commands.Cog):
 
         uploaded = await file.to_file()
 
-        await ctx.respond(file=uploaded, embed=embed)
+        await ctx.followup.send(file=uploaded, embed=embed)
 
     @emoji_commands.command()
     async def delete(self,
