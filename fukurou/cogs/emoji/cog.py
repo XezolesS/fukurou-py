@@ -26,40 +26,77 @@ class EmojiCog(commands.Cog):
         self.image_handlers = ImageHandlers()
 
     @emoji_commands.command()
-    async def upload(self,
-                     ctx: discord.ApplicationContext,
-                     name: str,
-                     file: discord.Attachment):
-        embed = discord.Embed()
-        uploaded = None
-
+    async def add(self,
+                  ctx: discord.ApplicationContext,
+                  name: str,
+                  file: discord.Attachment):
         try:
             self.image_handlers[ctx.guild.id].save_emoji(name=name,
                                                          uploader=ctx.author.id,
                                                          file_url=file.url,
                                                          file_type=file.content_type)
         except EmojiError as e:
-            embed.color = discord.Color.red()
-            embed.description = f'Failed to upload **{name}**'
+            embed = discord.Embed(
+                color=discord.Color.red(),
+                description = f'Failed to upload **{name}**'
+            )
             embed.add_field(
                 name=e.desc,
                 value=e.message_backticked()
             )
 
-            logger.error(e.message_double_quoted())
-        else:
-            embed.color = discord.Color.green()
-            embed.description = f'**{name}** is uploaded!'
-            embed.set_author(
-                name=ctx.author.display_name,
-                url=ctx.author.jump_url,
-                icon_url=ctx.author.display_avatar.url
-            )
-            embed.set_image(url=f'attachment://{file.filename}')
+            await ctx.respond(embed=embed)
 
-            uploaded = await file.to_file()
+            logger.error(e.message_double_quoted())
+            return
+
+        embed = discord.Embed(
+            color = discord.Color.green(),
+            description = f'**{name}** is uploaded!'
+        )
+        embed.set_author(
+            name=ctx.author.display_name,
+            url=ctx.author.jump_url,
+            icon_url=ctx.author.display_avatar.url
+        )
+        embed.set_image(url=f'attachment://{file.filename}')
+
+        uploaded = await file.to_file()
 
         await ctx.respond(file=uploaded, embed=embed)
+
+    @emoji_commands.command()
+    async def delete(self,
+                     ctx: discord.ApplicationContext,
+                     name: str):
+        try:
+            self.image_handlers[ctx.guild.id].delete_emoji(name=name)
+        except EmojiError as e:
+            embed = discord.Embed(
+                color=discord.Color.red(),
+                description = f'Failed to delete **{name}**'
+            )
+            embed.add_field(
+                name=e.desc,
+                value=e.message_backticked()
+            )
+
+            await ctx.respond(embed=embed)
+
+            logger.error(e.message_double_quoted())
+            return
+
+        embed = discord.Embed(
+            color = discord.Color.green(),
+            description = f'**{name}** has been deleted!'
+        )
+        embed.set_author(
+            name=ctx.author.display_name,
+            url=ctx.author.jump_url,
+            icon_url=ctx.author.display_avatar.url
+        )
+
+        await ctx.respond(embed=embed)
 
     @emoji_commands.command()
     async def rename(self,

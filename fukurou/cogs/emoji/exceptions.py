@@ -77,3 +77,8 @@ class EmojiInvalidNameError(EmojiError):
     @property
     def desc(self) -> str:
         return 'Invalid Name Format'
+
+class EmojiNotFoundError(EmojiError):
+    @property
+    def desc(self) -> str:
+        return 'Emoji Not Found'

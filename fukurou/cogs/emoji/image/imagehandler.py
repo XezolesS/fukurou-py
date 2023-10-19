@@ -13,7 +13,8 @@ from fukurou.cogs.emoji.exceptions import (
     EmojiFileDownloadError,
     EmojiFileSaveError,
     EmojiFileTypeError,
-    EmojiInvalidNameError
+    EmojiInvalidNameError,
+    EmojiNotFoundError
 )
 from fukurou.cogs.emoji.data import Emoji
 from fukurou.cogs.emoji.config import EmojiConfig
@@ -183,6 +184,40 @@ class ImageHandler:
             ) from e
 
         logger.info('Emoji "%s" is saved at "%s"', name, path)
+
+    def delete_emoji(self, name: str):
+        """
+        Delete emoji which matches with the `name`.
+
+        :param name: Name of the emoji.
+        :type name: str
+
+        :raises EmojiNotFoundError: If there's no emoji matches with the name.
+        :raises EmojiDatabaseError: If an error occured while deleting emoji data to the database.
+        """
+        # Check if emoji exists
+        database = sqlite.EmojiSqlite()
+        emoji = database.get_emoji(guild_id=self.guild_id, emoji_name=name)
+
+        if emoji is None:
+            raise EmojiNotFoundError(
+                message='There is no emoji named %s',
+                message_args=(name,)
+            )
+
+        # Delete emoji record from the database
+        try:
+            database.delete_emoji(guild_id=self.guild_id, emoji_name=name)
+        except EmojiDatabaseError as e:
+            raise EmojiDatabaseError(
+                message='Error occured while deleting emoji data: %s',
+                message_args=(e.args,)
+            ) from e
+
+        # Delete image file
+        match self.config.storage_type:
+            case 'local':
+                self.__delete_local_image(path=emoji.file_path)
 
     def get_emoji(self, name: str) -> Emoji | None:
         """
