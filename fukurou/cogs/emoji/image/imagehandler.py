@@ -264,7 +264,7 @@ class ImageHandler:
                                           old_name=old_name,
                                           new_name=new_name)
 
-    def emoji_list(self) -> list[Emoji]:
+    def emoji_list(self, keyword: str = None) -> list[Emoji]:
         """
         Retrieve list of emojis from the database.
 
@@ -272,7 +272,7 @@ class ImageHandler:
         :rtype: list[Emoji]
         """
         database = sqlite.EmojiSqlite()
-        return database.emoji_list(guild_id=self.guild_id)
+        return database.emoji_list(guild_id=self.guild_id, keyword=keyword)
 
 class ImageHandlers(TypedDict):
     guild_id: int

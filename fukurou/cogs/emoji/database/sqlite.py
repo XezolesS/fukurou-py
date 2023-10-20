@@ -15,6 +15,11 @@ from fukurou.cogs.emoji.exceptions import EmojiDatabaseError
 
 class EmojiSqlite(metaclass=Singleton):
     TABLE_SCRIPT_PATH = './fukurou/cogs/emoji/database/script/sqlite_table_init.sql'
+    WILDCARDS = {
+        '%': r'\%',
+        '_': r'\_',
+        '\\': r'\\'
+    }
 
     def __init__(self):
         self.__db_path = configs.get_config('emoji').database_fullpath
@@ -193,19 +198,37 @@ class EmojiSqlite(metaclass=Singleton):
 
         return True
 
-    def emoji_list(self, guild_id: int) -> list[Emoji]:
+    def emoji_list(self, guild_id: int, keyword: str = None) -> list[Emoji]:
         """
-        Retrieve list of emojis of the guild.
+        Retrieve list of emojis of the guild. 
+        If keyword is given, search for the emojis which contain the keyword in its name.
 
         :param guild_id: Guild Id to search.
         :type guild_id: int
+        :param keyword: Keyword to search for.
+        :type keyword: str
 
         :return: List of Emoji objects.
         :rtype: list[Emoji]
         """
-        query = 'SELECT * FROM emoji WHERE guild_id=? ORDER BY emoji_name'
+        query = 'SELECT * FROM emoji WHERE guild_id=? '
+        param = (guild_id,)
 
-        result = self.__cursor.execute(query, (guild_id,))
+        if keyword is not None:
+            # Escape wildcards
+            for key, value in self.WILDCARDS.items():
+                keyword = keyword.replace(key, value)
+
+            keyword = f'%{keyword}%'
+
+            query += r"AND emoji_name LIKE ? ESCAPE '\' "
+            param += (keyword,)
+
+        query += 'ORDER BY emoji_name;'
+
+        logger.debug('Query: "%s"', query)
+
+        result = self.__cursor.execute(query, param)
         data = result.fetchall()
 
         emoji_list = []

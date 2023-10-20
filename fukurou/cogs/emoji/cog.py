@@ -33,7 +33,7 @@ class EmojiCog(commands.Cog):
         required=True
     )
     @discord.commands.option(
-        input_type=type[discord.Attachment],
+        input_type=discord.Attachment,
         name='file',
         description='Image file of the emoji.',
         required=True
@@ -136,10 +136,30 @@ class EmojiCog(commands.Cog):
 
         await ctx.respond(file=file, embed=embed)
 
-    @emoji_commands.command()
-    async def list(self, ctx: discord.ApplicationContext):
-        emoji_list = self.image_handlers[ctx.guild.id].emoji_list()
-        emoji_page = EmojiListPage(guild=ctx.guild, emoji_list=emoji_list)
+    @emoji_commands.command(
+        name='list',
+        description='Shows a list of emoji in the server.'
+    )
+    @discord.commands.option(
+        input_type=str,
+        name='keyword',
+        discription='Keyword to search for.',
+        required=False
+    )
+    async def list(self, ctx: discord.ApplicationContext, keyword: str):
+        emoji_list = self.image_handlers[ctx.guild.id].emoji_list(keyword=keyword)
+
+        if not emoji_list:
+            embed = discord.Embed(
+                color=discord.Color.red(),
+                description = f"I can't find the emoji that contains `{keyword}` in its name!"
+            )
+
+            await ctx.respond(embed=embed)
+
+            return
+
+        emoji_page = EmojiListPage(guild=ctx.guild, emoji_list=emoji_list, keyword=keyword)
 
         await emoji_page.respond(ctx.interaction, ephemeral=False)
 
@@ -183,8 +203,9 @@ class EmojiCog(commands.Cog):
         self.image_handlers[guild.id] = ImageHandler(guild_id=guild.id)
 
 class EmojiListPage(pages.Paginator):
-    def __init__(self, guild: Guild, emoji_list: list[Emoji], **kwargs):
+    def __init__(self, guild: Guild, emoji_list: list[Emoji], keyword: str = None, **kwargs):
         self.guild = guild
+        self.keyword = keyword
         super().__init__(pages=self.__build_pages(emoji_list=emoji_list), **kwargs)
 
         self.custom_buttons = [
@@ -217,12 +238,17 @@ class EmojiListPage(pages.Paginator):
 
     def __build_pages(self, emoji_list: list[Emoji]):
         emoji_count = len(emoji_list)
+        title = 'Emoji List'
+
+        if self.keyword is not None:
+            title += f' Searched for "{self.keyword}"'
 
         emoji_pages = []
         for index, emoji in enumerate(emoji_list):
             # Create new embed page
             if index % 10 == 0:
-                embed = discord.Embed(title = f'Emoji List ({(index//10 + 1) * 10}/{emoji_count})')
+                embed = discord.Embed(title=f'{title}')
+                embed.set_footer(text=f'Total {emoji_count} of emojis are searched!')
                 emoji_pages.append(embed)
 
             uploader = self.guild.get_member(emoji.uploader_id)
