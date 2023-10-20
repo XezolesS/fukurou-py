@@ -3,6 +3,7 @@ import os
 import re
 from typing import TypedDict
 import requests
+from discord import Attachment
 
 from fukurou.configs import configs
 from fukurou.logging import logger
@@ -12,6 +13,7 @@ from fukurou.cogs.emoji.exceptions import (
     EmojiFileExistsError,
     EmojiFileDownloadError,
     EmojiFileSaveError,
+    EmojiFileTooLargeError,
     EmojiFileTypeError,
     EmojiInvalidNameError,
     EmojiNotFoundError
@@ -95,7 +97,7 @@ class ImageHandler:
         if os.path.exists(path=path):
             os.remove(path=path)
 
-    def save_emoji(self, name: str, uploader: int, file_url: str, file_type: str) -> None:
+    def save_emoji(self, name: str, uploader: int, attachment: Attachment) -> None:
         """
         Saves emoji with a given data.
 
@@ -103,24 +105,30 @@ class ImageHandler:
         :type name: str
         :param uploader: Id of the uploader.
         :type uploader: int
-        :param file_url: URL of the image file.
-        :type file_url: str
-        :param file_type: Type of the file represented as MIME.
-        :type file_type: str
+        :param attachment: Uploaded `Attachment` object of the image file to save.
+        :type attachment: discord.Attachment
 
         :raises EmojiInvalidNameError: If name is not match with the pattern from config.
         :raises EmojiDuplicateNameError: If given name is already exist in the database.
         :raises EmojiFileTypeError: If file type is not supported.
+        :raises EmojiFileTypeError: If file is larger than the size limit.
         :raises EmojiFileExistsError: If image file is already exist.
         :raises EmojiFileDownloadError: If an error occured while downloading image file.
         :raises EmojiFileSaveError: If an error occured while saving image file.
         :raises EmojiDatabaseError: If an error occured while saving emoji data to the database.
         """
-        logger.info("User(%d) uploading emoji: (Name: %s, FileUrl: %s, FileType: %s)",
+        logger.info("""User(%d) uploading emoji: {
+                        Name: %s,
+                        File URL: %s,
+                        File Size: %d Bytes,
+                        File Type: %s
+                    }
+                    """,
                     uploader,
                     name,
-                    file_url,
-                    file_type)
+                    attachment.url,
+                    attachment.size,
+                    attachment.content_type)
 
         # Check name validity
         pattern = f'^{self.config.expression_pattern}$'
@@ -140,11 +148,18 @@ class ImageHandler:
             )
 
         # Check if the file is image
-        ext = self.__verify_filetype(file_type=file_type)
+        ext = self.__verify_filetype(file_type=attachment.content_type)
         if ext is None:
             raise EmojiFileTypeError(
                 message='*.%s is invalid file type for Emoji.',
                 message_args=(ext,)
+            )
+
+        # Check the file size
+        if attachment.size > 8*1024*1024:
+            raise EmojiFileTooLargeError(
+                message='Image file(%.2f MB) is larger than the size limit(%d MB).',
+                message_args=(attachment.size/1024/1024, 8,)
             )
 
         # Save image to the storage
@@ -152,7 +167,7 @@ class ImageHandler:
             path = str()
             match self.config.storage_type:
                 case 'local':
-                    path = self.__save_local_image(file_url=file_url, ext=ext)
+                    path = self.__save_local_image(file_url=attachment.url, ext=ext)
         except EmojiFileExistsError as e:
             raise EmojiFileExistsError(
                 message='Image %s is already exist in %s',

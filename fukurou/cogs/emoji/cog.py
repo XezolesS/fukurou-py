@@ -1,10 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime
 import discord
 from discord import Guild
-from discord.ext import (
-    commands,
-    pages
-)
+from discord.ext import commands, pages
 
 from fukurou.logging import logger
 from .data import Emoji
@@ -25,7 +22,22 @@ class EmojiCog(commands.Cog):
         self.bot = bot
         self.image_handlers = ImageHandlers()
 
-    @emoji_commands.command()
+    @emoji_commands.command(
+        name='add',
+        description='Add custom emoji to the server.'
+    )
+    @discord.commands.option(
+        input_type=str,
+        name='name',
+        description='Name of the emoji.',
+        required=True
+    )
+    @discord.commands.option(
+        input_type=type[discord.Attachment],
+        name='file',
+        description='Image file of the emoji.',
+        required=True
+    )
     async def add(self,
                   ctx: discord.ApplicationContext,
                   name: str,
@@ -36,8 +48,7 @@ class EmojiCog(commands.Cog):
         try:
             self.image_handlers[ctx.guild.id].save_emoji(name=name,
                                                          uploader=ctx.author.id,
-                                                         file_url=file.url,
-                                                         file_type=file.content_type)
+                                                         attachment=file)
         except EmojiError as e:
             embed = discord.Embed(
                 color=discord.Color.red(),

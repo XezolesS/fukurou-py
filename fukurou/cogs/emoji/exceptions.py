@@ -16,7 +16,7 @@ class EmojiError(Exception):
 
     def message_double_quoted(self) -> str:
         """
-        Retrieve the formatted message with arguments enclosed by double-qoutes.
+        Get the formatted message where every `str` arguments enclosed by double-quotes.
 
         :return: Formatted message. 
         :rtype: str
@@ -25,7 +25,7 @@ class EmojiError(Exception):
 
     def message_backticked(self) -> str:
         """
-        Retrieve the formatted message with arguments enclosed by backticks.
+        Get the formatted message where every `str` arguments enclosed by backticks.
 
         :return: Formatted message. 
         :rtype: str
@@ -67,6 +67,11 @@ class EmojiFileSaveError(EmojiError):
     @property
     def desc(self) -> str:
         return 'Failed to Save File'
+
+class EmojiFileTooLargeError(EmojiError):
+    @property
+    def desc(self) -> str:
+        return 'File is Too Large'
 
 class EmojiFileTypeError(EmojiError):
     @property
