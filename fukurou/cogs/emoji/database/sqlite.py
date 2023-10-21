@@ -261,7 +261,7 @@ class EmojiSqlite(metaclass=Singleton):
 
         # Increase use count, create a record if it's not exist
         try:
-            if exists is None:
+            if exists is False:
                 query = """
                     INSERT INTO emoji_use VALUES (?, ?, ?, ?);
                 """
@@ -278,4 +278,3 @@ class EmojiSqlite(metaclass=Singleton):
             raise EmojiDatabaseError() from e
 
         self.__connection.commit()
-            

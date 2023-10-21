@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS emoji_use (
     user_id INTEGER,
     emoji_name TEXT,
     use_count INT,
-    PRIMARY KEY (guild_id, user_id),
+    PRIMARY KEY (guild_id, user_id, emoji_name),
     FOREIGN KEY (emoji_name) REFERENCES emoji(emoji_name)
 );
 
