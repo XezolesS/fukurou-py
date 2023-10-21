@@ -236,3 +236,46 @@ class EmojiSqlite(metaclass=Singleton):
             emoji_list.append(Emoji.from_entry(t))
 
         return emoji_list
+
+    def increase_emoji_usecount(self, guild_id: int, user_id: int, emoji_name: str):
+        """
+        Increase an emoji use count for the user.
+
+        :param guild_id: Guild Id of the emoji.
+        :type guild_id: int
+        :param user_id: User Id who used the emoji.
+        :type user_id: int
+        :param emoji_name: Name of the emoji.
+        :type emoji_name: str
+
+        :raises EmojiDatabaseError: If database operation failed.
+        """
+        # Check emoji usecount record exists or not
+        query_exist_check = """
+            SELECT * FROM emoji_use WHERE guild_id=? AND user_id=? AND emoji_name=?;
+        """
+        param = (guild_id, user_id, emoji_name)
+
+        result_exist_check = self.__cursor.execute(query_exist_check, param)
+        exists = result_exist_check.fetchone() is not None
+
+        # Increase use count, create a record if it's not exist
+        try:
+            if exists is None:
+                query = """
+                    INSERT INTO emoji_use VALUES (?, ?, ?, ?);
+                """
+                param += (1,)
+                self.__cursor.execute(query, param)
+            else:
+                query = """
+                    UPDATE emoji_use SET use_count=use_count + 1
+                    WHERE guild_id=? AND user_id=? AND emoji_name=?;
+                """
+                self.__cursor.execute(query, param)
+        except sqlite3.Error as e:
+            self.__connection.rollback()
+            raise EmojiDatabaseError() from e
+
+        self.__connection.commit()
+            

@@ -180,18 +180,28 @@ class EmojiCog(commands.Cog):
         if emoji is None:
             return
 
-        file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
+        try:
+            await message.delete()
 
-        embed = discord.Embed(colour=discord.Color.green())
-        embed.set_author(
-            name=author.display_name,
-            url=author.jump_url,
-            icon_url=author.display_avatar.url
+            file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
+
+            embed = discord.Embed(colour=discord.Color.green())
+            embed.set_author(
+                name=author.display_name,
+                url=author.jump_url,
+                icon_url=author.display_avatar.url
+            )
+            embed.set_image(url=f'attachment://{emoji.file_name}')
+
+            await message.channel.send(file=file, embed=embed)
+        except discord.DiscordException as e:
+            logger.error('Cannot send emoji to the user(%d): %s', author.id, e.args)
+
+        # Increase usecount when sending emoji succeed
+        self.image_handlers[guild_id].increase_emoji_usecount(
+            user=author.id,
+            name=emoji.emoji_name
         )
-        embed.set_image(url=f'attachment://{emoji.file_name}')
-
-        await message.channel.send(file=file, embed=embed)
-        await message.delete()
 
     @commands.Cog.listener('on_ready')
     async def load_guild_emoji(self):

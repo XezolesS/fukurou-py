@@ -274,6 +274,10 @@ class ImageHandler:
         database = sqlite.EmojiSqlite()
         return database.emoji_list(guild_id=self.guild_id, keyword=keyword)
 
+    def increase_emoji_usecount(self, user: int, name: str):
+        database = sqlite.EmojiSqlite()
+        database.increase_emoji_usecount(guild_id=self.guild_id, user_id=user, emoji_name=name)
+
 class ImageHandlers(TypedDict):
     guild_id: int
     handler: ImageHandler
