@@ -161,7 +161,7 @@ class EmojiCog(commands.Cog):
 
         emoji_page = EmojiListPage(guild=ctx.guild, emoji_list=emoji_list, keyword=keyword)
 
-        await emoji_page.respond(ctx.interaction, ephemeral=False)
+        await emoji_page.respond(ctx.interaction, ephemeral=True)
 
     @commands.Cog.listener('on_message')
     async def on_emoji(self, message: discord.Message):
