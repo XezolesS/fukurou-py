@@ -151,7 +151,7 @@ class EmojiCog(commands.Cog):
 
         if not emoji_list:
             if keyword is None:
-                message = f'There is no emoji on the server!'
+                message = 'There is no emoji on the server!'
             else:
                 message = f"I can't find the emoji that contains `{keyword}` in its name!"
 
