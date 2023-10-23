@@ -52,7 +52,7 @@ class EmojiCog(commands.Cog):
         except EmojiError as e:
             embed = discord.Embed(
                 color=discord.Color.red(),
-                description = f'Failed to upload **{name}**'
+                description=f'Failed to upload **{name}**'
             )
             embed.add_field(
                 name=e.desc,
@@ -65,8 +65,8 @@ class EmojiCog(commands.Cog):
             return
 
         embed = discord.Embed(
-            color = discord.Color.green(),
-            description = f'**{name}** is uploaded!'
+            color=discord.Color.green(),
+            description=f'**{name}** is uploaded!'
         )
         embed.set_author(
             name=ctx.author.display_name,
@@ -88,7 +88,7 @@ class EmojiCog(commands.Cog):
         except EmojiError as e:
             embed = discord.Embed(
                 color=discord.Color.red(),
-                description = f'Failed to delete **{name}**'
+                description=f'Failed to delete **{name}**'
             )
             embed.add_field(
                 name=e.desc,
@@ -101,8 +101,8 @@ class EmojiCog(commands.Cog):
             return
 
         embed = discord.Embed(
-            color = discord.Color.green(),
-            description = f'**{name}** has been deleted!'
+            color=discord.Color.green(),
+            description=f'**{name}** has been deleted!'
         )
         embed.set_author(
             name=ctx.author.display_name,
@@ -150,9 +150,14 @@ class EmojiCog(commands.Cog):
         emoji_list = self.image_handlers[ctx.guild.id].emoji_list(keyword=keyword)
 
         if not emoji_list:
+            if keyword is None:
+                message = f'There is no emoji on the server!'
+            else:
+                message = f"I can't find the emoji that contains `{keyword}` in its name!"
+
             embed = discord.Embed(
                 color=discord.Color.red(),
-                description = f"I can't find the emoji that contains `{keyword}` in its name!"
+                description=message
             )
 
             await ctx.respond(embed=embed)
@@ -221,23 +226,23 @@ class EmojiListPage(pages.Paginator):
         self.custom_buttons = [
             pages.PaginatorButton(
                 'first',
-                label = '⯬',
-                style = discord.ButtonStyle.green
+                label='⯬',
+                style=discord.ButtonStyle.green
             ),
             pages.PaginatorButton(
                 'prev',
-                label = '🠜',
-                style = discord.ButtonStyle.green
+                label='🠜',
+                style=discord.ButtonStyle.green
             ),
             pages.PaginatorButton(
                 'page_indicator',
-                style = discord.ButtonStyle.gray,
-                disabled = True
+                style=discord.ButtonStyle.gray,
+                disabled=True
             ),
             pages.PaginatorButton(
                 'next',
                 label='🠞',
-                style = discord.ButtonStyle.green
+                style=discord.ButtonStyle.green
             ),
             pages.PaginatorButton(
                 'last',
