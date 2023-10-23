@@ -30,8 +30,10 @@ class EmojiSqlite(metaclass=Singleton):
         # Make directory first
         os.makedirs(configs.get_config('emoji').database_dir, exist_ok=True)
 
-        self.__connection = sqlite3.connect(self.__db_path)
-        self.__cursor = self.__connection.cursor()
+        self.connection = sqlite3.connect(self.__db_path)
+        self.cursor = self.connection.cursor()
+
+        self.connection.execute('PRAGMA FOREIGN_KEYS = ON')
 
     def __init_tables(self):
         logger.info('Initialize emoji database.')
@@ -39,7 +41,7 @@ class EmojiSqlite(metaclass=Singleton):
         try:
             with open(self.TABLE_SCRIPT_PATH, 'r', encoding='utf8') as file:
                 script = ''.join(file.readlines())
-                self.__cursor.executescript(script)
+                self.cursor.executescript(script)
         except IOError as e:
             logger.error('Error occured while reading initialization script for emoji databse: %s',
                          e.strerror)
@@ -78,12 +80,12 @@ class EmojiSqlite(metaclass=Singleton):
         )
 
         try:
-            self.__cursor.execute(query, emoji.to_entry())
+            self.cursor.execute(query, emoji.to_entry())
         except sqlite3.Error as e:
-            self.__connection.rollback()
+            self.connection.rollback()
             raise EmojiDatabaseError() from e
 
-        self.__connection.commit()
+        self.connection.commit()
 
     def delete_emoji(self, guild_id: int, emoji_name: str) -> bool:
         """
@@ -107,15 +109,15 @@ class EmojiSqlite(metaclass=Singleton):
         query = f'DELETE FROM emoji WHERE guild_id=? AND {param_emoji_name}=?'
 
         try:
-            self.__cursor.execute(query, (guild_id, emoji_name))
+            self.cursor.execute(query, (guild_id, emoji_name))
         except sqlite3.Error as e:
-            self.__connection.rollback()
+            self.connection.rollback()
             raise EmojiDatabaseError() from e
 
-        self.__connection.commit()
+        self.connection.commit()
 
         # No deleted row.
-        if self.__cursor.rowcount == 0:
+        if self.cursor.rowcount == 0:
             return False
 
         return True
@@ -139,7 +141,7 @@ class EmojiSqlite(metaclass=Singleton):
 
         query = f'SELECT * FROM emoji WHERE guild_id=? AND {param_emoji_name}=?'
 
-        result = self.__cursor.execute(query, (guild_id, emoji_name))
+        result = self.cursor.execute(query, (guild_id, emoji_name))
         data = result.fetchone()
 
         if data is None:
@@ -185,15 +187,15 @@ class EmojiSqlite(metaclass=Singleton):
         query = f'UPDATE emoji SET emoji_name=? WHERE guild_id=? AND {param_emoji_name}=?'
 
         try:
-            self.__cursor.execute(query, (new_name, guild_id, old_name))
+            self.cursor.execute(query, (new_name, guild_id, old_name))
         except sqlite3.Error as e:
-            self.__connection.rollback()
+            self.connection.rollback()
             raise EmojiDatabaseError() from e
 
-        self.__connection.commit()
+        self.connection.commit()
 
         # No updated row.
-        if self.__cursor.rowcount == 0:
+        if self.cursor.rowcount == 0:
             return False
 
         return True
@@ -228,7 +230,7 @@ class EmojiSqlite(metaclass=Singleton):
 
         logger.debug('Query: "%s"', query)
 
-        result = self.__cursor.execute(query, param)
+        result = self.cursor.execute(query, param)
         data = result.fetchall()
 
         emoji_list = []
@@ -256,7 +258,7 @@ class EmojiSqlite(metaclass=Singleton):
         """
         param = (guild_id, user_id, emoji_name)
 
-        result_exist_check = self.__cursor.execute(query_exist_check, param)
+        result_exist_check = self.cursor.execute(query_exist_check, param)
         exists = result_exist_check.fetchone() is not None
 
         # Increase use count, create a record if it's not exist
@@ -266,15 +268,15 @@ class EmojiSqlite(metaclass=Singleton):
                     INSERT INTO emoji_use VALUES (?, ?, ?, ?);
                 """
                 param += (1,)
-                self.__cursor.execute(query, param)
+                self.cursor.execute(query, param)
             else:
                 query = """
                     UPDATE emoji_use SET use_count=use_count + 1
                     WHERE guild_id=? AND user_id=? AND emoji_name=?;
                 """
-                self.__cursor.execute(query, param)
+                self.cursor.execute(query, param)
         except sqlite3.Error as e:
-            self.__connection.rollback()
+            self.connection.rollback()
             raise EmojiDatabaseError() from e
 
-        self.__connection.commit()
+        self.connection.commit()
