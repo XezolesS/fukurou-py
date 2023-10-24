@@ -1,4 +1,3 @@
-from datetime import datetime
 import discord
 from discord import Guild
 from discord.ext import commands, pages
@@ -11,6 +10,7 @@ from .image import (
     ImageHandlers,
     ImageHandler
 )
+from .views import EmojiListPage
 
 class EmojiCog(commands.Cog):
     emoji_commands = discord.SlashCommandGroup(
@@ -216,67 +216,3 @@ class EmojiCog(commands.Cog):
     @commands.Cog.listener('on_guild_join')
     async def init_guild_emoji(self, guild: discord.Guild):
         self.image_handlers[guild.id] = ImageHandler(guild_id=guild.id)
-
-class EmojiListPage(pages.Paginator):
-    def __init__(self, guild: Guild, emoji_list: list[Emoji], keyword: str = None, **kwargs):
-        self.guild = guild
-        self.keyword = keyword
-        super().__init__(pages=self.__build_pages(emoji_list=emoji_list), **kwargs)
-
-        self.custom_buttons = [
-            pages.PaginatorButton(
-                'first',
-                label='⯬',
-                style=discord.ButtonStyle.green
-            ),
-            pages.PaginatorButton(
-                'prev',
-                label='🠜',
-                style=discord.ButtonStyle.green
-            ),
-            pages.PaginatorButton(
-                'page_indicator',
-                style=discord.ButtonStyle.gray,
-                disabled=True
-            ),
-            pages.PaginatorButton(
-                'next',
-                label='🠞',
-                style=discord.ButtonStyle.green
-            ),
-            pages.PaginatorButton(
-                'last',
-                label='⯮',
-                style=discord.ButtonStyle.green
-            ),
-        ]
-
-    def __build_pages(self, emoji_list: list[Emoji]):
-        emoji_count = len(emoji_list)
-        title = 'Emoji List'
-
-        if self.keyword is not None:
-            title += f' Searched for "{self.keyword}"'
-
-        emoji_pages = []
-        for index, emoji in enumerate(emoji_list):
-            # Create new embed page
-            if index % 10 == 0:
-                embed = discord.Embed(title=f'{title}')
-                embed.set_footer(text=f'Total {emoji_count} of emojis are searched!')
-                emoji_pages.append(embed)
-
-            uploader = self.guild.get_member(emoji.uploader_id)
-            uploader = uploader.mention if uploader is not None else '*<Unknown>*'
-
-            local_tz = datetime.now().tzinfo
-            created_at = emoji.created_at.astimezone(tz=local_tz).strftime('%Y/%m/%d %H:%M:%S')
-
-            # Add emoji info
-            embed.add_field(
-                name = f':small_blue_diamond: {emoji.emoji_name}',
-                value = f'Uploaded by {uploader} at `{created_at}`',
-                inline = False
-            )
-
-        return emoji_pages
