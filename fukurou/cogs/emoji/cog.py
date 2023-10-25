@@ -1,16 +1,21 @@
+# pylint: disable=missing-function-docstring
+
 import discord
 from discord import Guild
-from discord.ext import commands, pages
+from discord.ext import commands
 
 from fukurou.logging import logger
-from .data import Emoji
 from .emojipareser import EmojiParser
 from .exceptions import EmojiError
 from .image import (
     ImageHandlers,
     ImageHandler
 )
-from .views import EmojiListPage
+from .views import (
+    EmojiEmbed,
+    EmojiErrorEmbed,
+    EmojiListPage
+)
 
 class EmojiCog(commands.Cog):
     emoji_commands = discord.SlashCommandGroup(
@@ -50,34 +55,21 @@ class EmojiCog(commands.Cog):
                                                          uploader=ctx.author.id,
                                                          attachment=file)
         except EmojiError as e:
-            embed = discord.Embed(
-                color=discord.Color.red(),
-                description=f'Failed to upload **{name}**'
-            )
-            embed.add_field(
-                name=e.desc,
-                value=e.message_backticked()
-            )
-
-            await ctx.respond(embed=embed)
-
             logger.error(e.message_double_quoted())
+            await ctx.respond(
+                embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e)
+            )
+
             return
 
-        embed = discord.Embed(
-            color=discord.Color.green(),
-            description=f'**{name}** is uploaded!'
+        embed = EmojiEmbed(
+            description=f'**{name}** is uploaded!',
+            image_url=f'attachment://{file.filename}',
+            author=ctx.author
         )
-        embed.set_author(
-            name=ctx.author.display_name,
-            url=ctx.author.jump_url,
-            icon_url=ctx.author.display_avatar.url
-        )
-        embed.set_image(url=f'attachment://{file.filename}')
+        emoji_file = await file.to_file()
 
-        uploaded = await file.to_file()
-
-        await ctx.followup.send(file=uploaded, embed=embed)
+        await ctx.followup.send(file=emoji_file, embed=embed)
 
     @emoji_commands.command()
     async def delete(self,
@@ -86,28 +78,15 @@ class EmojiCog(commands.Cog):
         try:
             self.image_handlers[ctx.guild.id].delete_emoji(name=name)
         except EmojiError as e:
-            embed = discord.Embed(
-                color=discord.Color.red(),
-                description=f'Failed to delete **{name}**'
-            )
-            embed.add_field(
-                name=e.desc,
-                value=e.message_backticked()
-            )
-
-            await ctx.respond(embed=embed)
-
             logger.error(e.message_double_quoted())
+            await ctx.respond(
+                embed=EmojiErrorEmbed(description=f'Failed to delete **{name}**', error=e)
+            )
+
             return
 
-        embed = discord.Embed(
-            color=discord.Color.green(),
+        embed = EmojiEmbed(
             description=f'**{name}** has been deleted!'
-        )
-        embed.set_author(
-            name=ctx.author.display_name,
-            url=ctx.author.jump_url,
-            icon_url=ctx.author.display_avatar.url
         )
 
         await ctx.respond(embed=embed)
@@ -117,24 +96,26 @@ class EmojiCog(commands.Cog):
                      ctx: discord.ApplicationContext,
                      old_name: str,
                      new_name: str):
+        # TODO: Rename exception handling
         result = self.image_handlers[ctx.guild.id].rename_emoji(old_name=old_name,
                                                                 new_name=new_name)
-
-        embed = discord.Embed()
-        file = None
         if result is True:
-            embed.color = discord.Color.green()
-            embed.description = f'Emoji `{old_name}` is now `{new_name}`!'
-
             emoji = self.image_handlers[ctx.guild.id].get_emoji(new_name)
-            file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
+            emoji_file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
 
-            embed.set_image(url=f'attachment://{file.filename}')
+            embed = EmojiEmbed(
+                description=f'Emoji `{old_name}` is now `{new_name}`!',
+                image_url=f'attachment://{emoji_file.filename}',
+                author=ctx.author
+            )
+
+            await ctx.respond(file=emoji_file, embed=embed)
         else:
-            embed.color = discord.Color.red()
-            embed.description = f'Cannot rename emoji `{old_name}` to `{new_name}`!'
-
-        await ctx.respond(file=file, embed=embed)
+            await ctx.respond(
+                embed=EmojiErrorEmbed(
+                    description=f'Cannot rename emoji `{old_name}` to `{new_name}`!'
+                )
+            )
 
     @emoji_commands.command(
         name='list',
@@ -155,12 +136,7 @@ class EmojiCog(commands.Cog):
             else:
                 message = f"I can't find the emoji that contains `{keyword}` in its name!"
 
-            embed = discord.Embed(
-                color=discord.Color.red(),
-                description=message
-            )
-
-            await ctx.respond(embed=embed)
+            await ctx.respond(embed=EmojiErrorEmbed(description=message))
 
             return
 
@@ -178,33 +154,27 @@ class EmojiCog(commands.Cog):
         if image_name is None:
             return
 
-        author = message.author
-        guild_id = message.guild.id
-
-        emoji = self.image_handlers[guild_id].get_emoji(image_name)
+        emoji = self.image_handlers[message.guild.id].get_emoji(image_name)
         if emoji is None:
             return
 
         try:
             await message.delete()
 
-            file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
+            emoji_file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
 
-            embed = discord.Embed(colour=discord.Color.green())
-            embed.set_author(
-                name=author.display_name,
-                url=author.jump_url,
-                icon_url=author.display_avatar.url
+            embed = EmojiEmbed(
+                image_url=f'attachment://{emoji.file_name}',
+                author=message.author
             )
-            embed.set_image(url=f'attachment://{emoji.file_name}')
 
-            await message.channel.send(file=file, embed=embed)
+            await message.channel.send(file=emoji_file, embed=embed)
         except discord.DiscordException as e:
-            logger.error('Cannot send emoji to the user(%d): %s', author.id, e.args)
+            logger.error('Cannot send emoji to the user(%d): %s', message.author.id, e.args)
 
         # Increase usecount when sending emoji succeed
-        self.image_handlers[guild_id].increase_emoji_usecount(
-            user=author.id,
+        self.image_handlers[message.guild.id].increase_emoji_usecount(
+            user=message.author.id,
             name=emoji.emoji_name
         )
 

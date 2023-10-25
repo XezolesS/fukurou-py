@@ -1,12 +1,53 @@
 from datetime import datetime
 from discord import (
-    ButtonStyle,
+    Guild,
+    User,
+    Member,
     Embed,
-    Guild
+    EmbedField,
+    ButtonStyle
 )
+from discord.colour import Colour
 from discord.ext.pages import Paginator, PaginatorButton
 
 from .data import Emoji
+from .exceptions import EmojiError
+
+class EmojiEmbed(Embed):
+    def __init__(self,
+                 title: str | None = None,
+                 description: str | None = None,
+                 image_url: str | None = None,
+                 author: Member | User | None = None):
+        super().__init__(
+            colour=Colour.nitro_pink(),
+            title=title,
+            description=description
+        )
+
+        if image_url is not None:
+            self.set_image(url=image_url)
+
+        if author is not None:
+            self.set_author(
+                name=author.display_name,
+                url=author.jump_url,
+                icon_url=author.display_avatar
+            )
+
+class EmojiErrorEmbed(Embed):
+    def __init__(self,
+                 title: str | None = None,
+                 description: str | None = None,
+                 error: EmojiError | None = None):
+        super().__init__(
+            colour=Colour.red(),
+            title=title,
+            description=description
+        )
+
+        if error is not None:
+            self.add_field(name=error.desc, value=error.message_backticked())
 
 class EmojiListPage(Paginator):
     def __init__(self, guild: Guild, emoji_list: list[Emoji], keyword: str = None, **kwargs):
