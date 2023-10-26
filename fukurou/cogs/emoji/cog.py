@@ -5,12 +5,9 @@ from discord import Guild
 from discord.ext import commands
 
 from fukurou.logging import logger
+from .emojimanager import EmojiManager, GuildEmojiManager
 from .emojipareser import EmojiParser
 from .exceptions import EmojiError
-from .image import (
-    ImageHandlers,
-    ImageHandler
-)
 from .views import (
     EmojiEmbed,
     EmojiErrorEmbed,
@@ -25,7 +22,6 @@ class EmojiCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.image_handlers = ImageHandlers()
 
     @emoji_commands.command(
         name='add',
@@ -51,9 +47,8 @@ class EmojiCog(commands.Cog):
         await ctx.defer()
 
         try:
-            self.image_handlers[ctx.guild.id].save_emoji(name=name,
-                                                         uploader=ctx.author.id,
-                                                         attachment=file)
+            # TODO: Insert emoji save method here.
+            pass
         except EmojiError as e:
             logger.error(e.message_double_quoted())
             await ctx.respond(
@@ -76,7 +71,8 @@ class EmojiCog(commands.Cog):
                      ctx: discord.ApplicationContext,
                      name: str):
         try:
-            self.image_handlers[ctx.guild.id].delete_emoji(name=name)
+            # TODO: Insert emoji delete method here
+            pass
         except EmojiError as e:
             logger.error(e.message_double_quoted())
             await ctx.respond(
@@ -97,10 +93,12 @@ class EmojiCog(commands.Cog):
                      old_name: str,
                      new_name: str):
         # TODO: Rename exception handling
-        result = self.image_handlers[ctx.guild.id].rename_emoji(old_name=old_name,
-                                                                new_name=new_name)
+        # TODO: Insert emoji rename method here
+        pass
+
         if result is True:
-            emoji = self.image_handlers[ctx.guild.id].get_emoji(new_name)
+            # TODO: Insert emoji get method here
+            emoji = 'Here'
             emoji_file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
 
             embed = EmojiEmbed(
@@ -128,7 +126,8 @@ class EmojiCog(commands.Cog):
         required=False
     )
     async def list(self, ctx: discord.ApplicationContext, keyword: str):
-        emoji_list = self.image_handlers[ctx.guild.id].emoji_list(keyword=keyword)
+        #TODO: Insert emoji list method here
+        pass
 
         if not emoji_list:
             if keyword is None:
@@ -154,7 +153,8 @@ class EmojiCog(commands.Cog):
         if image_name is None:
             return
 
-        emoji = self.image_handlers[message.guild.id].get_emoji(image_name)
+        # TODO: Insert emoji get method here
+        emoji = 'Here'
         if emoji is None:
             return
 
@@ -173,16 +173,12 @@ class EmojiCog(commands.Cog):
             logger.error('Cannot send emoji to the user(%d): %s', message.author.id, e.args)
 
         # Increase usecount when sending emoji succeed
-        self.image_handlers[message.guild.id].increase_emoji_usecount(
-            user=message.author.id,
-            name=emoji.emoji_name
-        )
+        # TODO: Insert emoji increase_usecount method here
 
     @commands.Cog.listener('on_ready')
     async def load_guild_emoji(self):
-        for guild in self.bot.guilds:
-            self.image_handlers[guild.id] = ImageHandler(guild_id=guild.id)
+        EmojiManager().add_managers(guild_ids=self.bot.guilds)
 
     @commands.Cog.listener('on_guild_join')
     async def init_guild_emoji(self, guild: discord.Guild):
-        self.image_handlers[guild.id] = ImageHandler(guild_id=guild.id)
+        EmojiManager().add_manager(guild_id=guild.id)
