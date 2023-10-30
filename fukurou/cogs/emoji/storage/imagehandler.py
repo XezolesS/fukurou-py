@@ -260,7 +260,7 @@ class ImageHandler:
         :rtype: 
         """
         database = sqlite.EmojiSqlite()
-        return database.update_emoji_name(guild_id=self.guild_id,
+        return database.rename(guild_id=self.guild_id,
                                           old_name=old_name,
                                           new_name=new_name)
 
@@ -272,7 +272,7 @@ class ImageHandler:
         :rtype: list[Emoji]
         """
         database = sqlite.EmojiSqlite()
-        return database.emoji_list(guild_id=self.guild_id, keyword=keyword)
+        return database.list(guild_id=self.guild_id, keyword=keyword)
 
     def increase_emoji_usecount(self, user: int, name: str):
         database = sqlite.EmojiSqlite()

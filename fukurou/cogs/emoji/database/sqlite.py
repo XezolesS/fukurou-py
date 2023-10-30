@@ -1,19 +1,14 @@
 import os
+from contextlib import closing
 import sqlite3
-from datetime import datetime, timezone
 
 from fukurou.configs import configs
 from fukurou.logging import logger
-from fukurou.patterns import Singleton
-from fukurou.cogs.emoji.data import (
-    Emoji,
-    Tag,
-    TagMap,
-    TagRelation
-)
+from fukurou.cogs.emoji.data import Emoji
 from fukurou.cogs.emoji.exceptions import EmojiDatabaseError
+from .base import BaseEmojiDatabase
 
-class EmojiSqlite(metaclass=Singleton):
+class EmojiSqlite(BaseEmojiDatabase):
     TABLE_SCRIPT_PATH = './fukurou/cogs/emoji/database/script/sqlite_table_init.sql'
     WILDCARDS = {
         '%': r'\%',
@@ -21,108 +16,41 @@ class EmojiSqlite(metaclass=Singleton):
         '\\': r'\\'
     }
 
-    def __init__(self):
-        self.__db_path = configs.get_config('emoji').database_fullpath
-        self.__connect()
-        self.__init_tables()
-
-    def __connect(self):
-        # Make directory first
-        os.makedirs(configs.get_config('emoji').database_dir, exist_ok=True)
-
-        self.connection = sqlite3.connect(self.__db_path)
-        self.cursor = self.connection.cursor()
-
-        self.connection.execute('PRAGMA FOREIGN_KEYS = ON')
-
-    def __init_tables(self):
-        logger.info('Initialize emoji database.')
+    def _connect(self):
+        db_path = configs.get_config('emoji').database_fullpath
 
         try:
-            with open(self.TABLE_SCRIPT_PATH, 'r', encoding='utf8') as file:
+            if not os.path.exists(db_path):
+               os.makedirs(name=db_path, exist_ok=True)
+        except OSError as e:
+            logger.error('Cannot create database file: %s', e.strerror)
+        else:
+            self.conn = sqlite3.connect(database=db_path)
+            self.conn.execute('PRAGMA FOREIGN_KEYS = ON')
+
+            logger.info('Connected to the Emoji database.')
+
+    def _init_tables(self):
+        script_relpath = os.path.join('script',  'sqlite_table_init.sql')
+        script_path = os.path.join(os.path.dirname(__file__), script_relpath)
+        logger.debug('Emoji table initialization script found at: %s', script_path)
+
+        try:
+            with open(script_path, 'r', encoding='utf8') as file:
                 script = ''.join(file.readlines())
-                self.cursor.executescript(script)
+
+            with closing(self.conn.cursor()) as cursor:
+                cursor.executescript(script)
         except IOError as e:
-            logger.error('Error occured while reading initialization script for emoji databse: %s',
+            logger.error('Error occured while reading initialization script for Emoji databse: %s',
                          e.strerror)
-
-            return
         except sqlite3.DatabaseError as e:
-            logger.error('Error occured while executing script for emoji databse: %s',
+            logger.error('Error occured while executing script for Emoji databse: %s',
                          e.args)
+        else:
+            logger.info('Successfully initialized Emoji database.')
 
-            return
-
-        logger.info('Successfully initialize emoji database.')
-
-    def save_emoji(self, guild_id: int, emoji_name: str, uploader_id: str, file_path: str):
-        """
-        Save emoji data to the database.
-
-        :param guild_id: Guild Id of the emoji.
-        :type guild_id: int
-        :param emoji_name: Name of the emoji.
-        :type emoji_name: str
-        :param uploader_id: Id of the emoji uploader.
-        :type uploader_id: str
-        :param file_path: Path of the emoji file.
-        :type file_path: str
-
-        :raises EmojiDatabaseError: If database operation failed.
-        """
-        query = 'INSERT INTO emoji VALUES (?, ?, ?, ?, ?)'
-
-        emoji = Emoji(
-            guild_id=guild_id,
-            emoji_name=emoji_name,
-            uploader_id=uploader_id,
-            file_path=file_path
-        )
-
-        try:
-            self.cursor.execute(query, emoji.to_entry())
-        except sqlite3.Error as e:
-            self.connection.rollback()
-            raise EmojiDatabaseError() from e
-
-        self.connection.commit()
-
-    def delete_emoji(self, guild_id: int, emoji_name: str) -> bool:
-        """
-        Delete emoji record from the database.
-
-        :param guild_id: Guild Id of the emoji.
-        :type guild_id: int
-        :param emoji_name: Name of the emoji.
-        :type emoji_name: str
-
-        :raises EmojiDatabaseError: If database operation failed.
-
-        :return: True if a record deleted, False if not.
-        :rtype: bool
-        """
-        param_emoji_name = 'emoji_name'
-        if configs.get_config('emoji').ignore_spaces is True:
-            param_emoji_name = "replace(emoji_name, ' ', '')"
-            emoji_name = emoji_name.replace(' ', '')
-
-        query = f'DELETE FROM emoji WHERE guild_id=? AND {param_emoji_name}=?'
-
-        try:
-            self.cursor.execute(query, (guild_id, emoji_name))
-        except sqlite3.Error as e:
-            self.connection.rollback()
-            raise EmojiDatabaseError() from e
-
-        self.connection.commit()
-
-        # No deleted row.
-        if self.cursor.rowcount == 0:
-            return False
-
-        return True
-
-    def get_emoji(self, guild_id: int, emoji_name: str) -> Emoji | None:
+    def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         """
         Get emoji data which matches with the `guild_id` and `emoji_name` from the database.
 
@@ -141,15 +69,13 @@ class EmojiSqlite(metaclass=Singleton):
 
         query = f'SELECT * FROM emoji WHERE guild_id=? AND {param_emoji_name}=?'
 
-        result = self.cursor.execute(query, (guild_id, emoji_name))
-        data = result.fetchone()
+        with closing(self.conn.cursor()) as cursor:
+            result = cursor.execute(query, (guild_id, emoji_name))
+            data = result.fetchone()
 
-        if data is None:
-            return None
+        return Emoji.from_entry(entry=data)
 
-        return Emoji.from_entry(data)
-
-    def emoji_exists(self, guild_id: int, emoji_name: str) -> bool:
+    def exists(self, guild_id: int, emoji_name: str) -> bool:
         """
         Check if emoji with a name exists.
 
@@ -161,9 +87,69 @@ class EmojiSqlite(metaclass=Singleton):
         :return: True if it exists, False if not.
         :rtype: bool
         """
-        return self.get_emoji(guild_id=guild_id, emoji_name=emoji_name) is not None
+        return self.get(guild_id=guild_id, emoji_name=emoji_name) is not None
 
-    def update_emoji_name(self, guild_id: int, old_name: str, new_name: str) -> bool:
+    def add(self, guild_id: int, emoji_name: str, uploader_id: str, file_name: str):
+        """
+        Add emoji data to the database.
+
+        :param guild_id: Guild Id of the emoji.
+        :type guild_id: int
+        :param emoji_name: Name of the emoji.
+        :type emoji_name: str
+        :param uploader_id: Id of the emoji uploader.
+        :type uploader_id: str
+        :param file_name: Name of the emoji file.
+        :type file_name: str
+
+        :raises EmojiDatabaseError: If database operation failed.
+        """
+        query = 'INSERT INTO emoji VALUES (?, ?, ?, ?, ?)'
+
+        emoji = Emoji(
+            guild_id=guild_id,
+            emoji_name=emoji_name,
+            uploader_id=uploader_id,
+            file_name=file_name
+        )
+
+        try:
+            with closing(self.conn.cursor()) as cursor:
+                cursor.execute(query, emoji.to_entry())
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise EmojiDatabaseError() from e
+
+        self.conn.commit()
+
+    def delete(self, guild_id: int, emoji_name: str) -> None:
+        """
+        Delete emoji record from the database.
+
+        :param guild_id: Guild Id of the emoji.
+        :type guild_id: int
+        :param emoji_name: Name of the emoji.
+        :type emoji_name: str
+
+        :raises EmojiDatabaseError: If database operation failed.
+        """
+        param_emoji_name = 'emoji_name'
+        if configs.get_config('emoji').ignore_spaces is True:
+            param_emoji_name = "replace(emoji_name, ' ', '')"
+            emoji_name = emoji_name.replace(' ', '')
+
+        query = f'DELETE FROM emoji WHERE guild_id=? AND {param_emoji_name}=?'
+
+        try:
+            with closing(self.conn.cursor()) as cursor:
+                cursor.execute(query, (guild_id, emoji_name))
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise EmojiDatabaseError() from e
+
+        self.conn.commit()
+
+    def rename(self, guild_id: int, old_name: str, new_name: str) -> None:
         """
         Rename a emoji which has a name of 'old_name' to 'new_name' of the guild.
 
@@ -175,9 +161,6 @@ class EmojiSqlite(metaclass=Singleton):
         :type new_name: str
 
         :raises EmojiDatabaseError: If database operation failed.
-
-        :return: True if success, False if not.
-        :rtype: bool
         """
         param_emoji_name = 'emoji_name'
         if configs.get_config('emoji').ignore_spaces is True:
@@ -187,20 +170,15 @@ class EmojiSqlite(metaclass=Singleton):
         query = f'UPDATE emoji SET emoji_name=? WHERE guild_id=? AND {param_emoji_name}=?'
 
         try:
-            self.cursor.execute(query, (new_name, guild_id, old_name))
+            with closing(self.conn.cursor()) as cursor:
+                cursor.execute(query, (new_name, guild_id, old_name))
         except sqlite3.Error as e:
-            self.connection.rollback()
+            self.conn.rollback()
             raise EmojiDatabaseError() from e
 
-        self.connection.commit()
+        self.conn.commit()
 
-        # No updated row.
-        if self.cursor.rowcount == 0:
-            return False
-
-        return True
-
-    def emoji_list(self, guild_id: int, keyword: str = None) -> list[Emoji]:
+    def list(self, guild_id: int, keyword: str = None) -> list[Emoji]:
         """
         Retrieve list of emojis of the guild. 
         If keyword is given, search for the emojis which contain the keyword in its name.
@@ -228,10 +206,9 @@ class EmojiSqlite(metaclass=Singleton):
 
         query += 'ORDER BY emoji_name;'
 
-        logger.debug('Query: "%s"', query)
-
-        result = self.cursor.execute(query, param)
-        data = result.fetchall()
+        with closing(self.conn.cursor()) as cursor:
+            result = cursor.execute(query, param)
+            data = result.fetchall()
 
         emoji_list = []
         for t in data:
@@ -239,7 +216,7 @@ class EmojiSqlite(metaclass=Singleton):
 
         return emoji_list
 
-    def increase_emoji_usecount(self, guild_id: int, user_id: int, emoji_name: str):
+    def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         """
         Increase an emoji use count for the user.
 
@@ -252,31 +229,21 @@ class EmojiSqlite(metaclass=Singleton):
 
         :raises EmojiDatabaseError: If database operation failed.
         """
-        # Check emoji usecount record exists or not
-        query_exist_check = """
-            SELECT * FROM emoji_use WHERE guild_id=? AND user_id=? AND emoji_name=?;
-        """
-        param = (guild_id, user_id, emoji_name)
-
-        result_exist_check = self.cursor.execute(query_exist_check, param)
-        exists = result_exist_check.fetchone() is not None
-
-        # Increase use count, create a record if it's not exist
         try:
-            if exists is False:
+            # Increase use count, create a record if it's not exist
+            with closing(self.conn.cursor()) as cursor:
                 query = """
-                    INSERT INTO emoji_use VALUES (?, ?, ?, ?);
+                    INSERT OR IGNORE INTO emoji_use VALUES (?, ?, ?, ?);
                 """
-                param += (1,)
-                self.cursor.execute(query, param)
-            else:
+                cursor.execute(query, (guild_id, user_id, emoji_name, 0))
+
                 query = """
                     UPDATE emoji_use SET use_count=use_count + 1
                     WHERE guild_id=? AND user_id=? AND emoji_name=?;
                 """
-                self.cursor.execute(query, param)
+                cursor.execute(query, (guild_id, user_id, emoji_name))
         except sqlite3.Error as e:
-            self.connection.rollback()
+            self.conn.rollback()
             raise EmojiDatabaseError() from e
 
-        self.connection.commit()
+        self.conn.commit()
