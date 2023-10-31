@@ -1,5 +1,4 @@
 from __future__ import annotations
-import os
 from datetime import datetime, timezone
 from typing import Tuple
 
@@ -29,7 +28,7 @@ class Emoji:
                  emoji_name: str,
                  uploader_id: int,
                  file_name: str,
-                 created_at: datetime = datetime.now(timezone.utc)):
+                 created_at: datetime = datetime.now(timezone.utc)) -> None:
         self.__guild_id = guild_id
         self.__emoji_name = emoji_name
         self.__uploader_id = uploader_id
@@ -56,3 +55,55 @@ class Emoji:
 
     def to_entry(self) -> Tuple:
         return (self.guild_id, self.emoji_name, self.uploader_id, self.file_name, self.created_at)
+
+class EmojiListItem:
+    @property
+    def emoji_name(self) -> str:
+        return self.__emoji_name
+
+    @property
+    def uploader_id(self) -> int:
+        return self.__uploader_id
+
+    @property
+    def created_at(self) -> datetime:
+        return self.__created_at
+
+    @property
+    def use_count(self) -> int:
+        return self.__use_count
+
+    def __init__(self,
+                 emoji_name: str,
+                 uploader_id: int,
+                 created_at: datetime,
+                 use_count: int) -> None:
+        self.__emoji_name = emoji_name
+        self.__uploader_id = uploader_id
+        self.__created_at = created_at
+        self.__use_count = use_count
+
+    @classmethod
+    def from_entry(cls, entry: Tuple) -> EmojiListItem | None:
+        if not isinstance(entry, Tuple):
+            return None
+
+        try:
+            return EmojiListItem(
+                emoji_name=entry[0],
+                uploader_id=int(entry[1]),
+                created_at=datetime.fromisoformat(entry[2]),
+                use_count=int(entry[3])
+            )
+        except ValueError:
+            return None
+        except TypeError:
+            return None
+
+    @classmethod
+    def from_entries(cls, entries: list[Tuple]) -> list[EmojiListItem]:
+        emoji_list = []
+        for e in entries:
+            emoji_list.append(EmojiListItem.from_entry(entry=e))
+
+        return emoji_list

@@ -19,7 +19,7 @@ class EmojiUse:
                  guild_id: int,
                  emoji_name: str,
                  uploader_id: int,
-                 use_count: int = 0):
+                 use_count: int = 0) -> None:
         self.__guild_id = guild_id
         self.__emoji_name = emoji_name
         self.__user_id = uploader_id

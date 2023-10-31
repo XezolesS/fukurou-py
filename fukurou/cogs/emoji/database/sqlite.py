@@ -4,7 +4,7 @@ import sqlite3
 
 from fukurou.configs import configs
 from fukurou.logging import logger
-from fukurou.cogs.emoji.data import Emoji
+from fukurou.cogs.emoji.data import Emoji, EmojiListItem
 from fukurou.cogs.emoji.exceptions import EmojiDatabaseError
 from .base import BaseEmojiDatabase
 
@@ -116,10 +116,10 @@ class EmojiSqlite(BaseEmojiDatabase):
 
         self.conn.commit()
 
-    def list(self, guild_id: int, keyword: str = None) -> list[Emoji]:
-        query = 'SELECT * FROM emoji WHERE guild_id=? '
+    def list(self, guild_id: int, keyword: str = None) -> list[EmojiListItem]:
         param = (guild_id,)
 
+        keyword_clause = ''
         if keyword is not None:
             # Escape wildcards
             for key, value in WILDCARDS.items():
@@ -127,20 +127,30 @@ class EmojiSqlite(BaseEmojiDatabase):
 
             keyword = f'%{keyword}%'
 
-            query += r"AND emoji_name LIKE ? ESCAPE '\' "
+            keyword_clause = r"AND emoji_name LIKE ? ESCAPE '\'"
             param += (keyword,)
 
-        query += 'ORDER BY emoji_name;'
+        query = f"""
+            SELECT
+                e.emoji_name,
+                e.uploader_id,
+                e.created_at,
+                COALESCE(SUM(u.use_count), 0) AS use_count
+            FROM emoji AS e
+            LEFT OUTER JOIN emoji_use AS u
+                ON e.guild_id=u.guild_id AND e.emoji_name=u.emoji_name
+            WHERE e.guild_id=? {keyword_clause}
+            GROUP BY e.emoji_name
+            ORDER BY e.emoji_name ASC, use_count DESC, e.created_at ASC;
+        """
+
+        logger.debug('EmojiSqlite.list() query built: %s', query)
 
         with closing(self.conn.cursor()) as cursor:
             result = cursor.execute(query, param)
             data = result.fetchall()
 
-        emoji_list = []
-        for t in data:
-            emoji_list.append(Emoji.from_entry(t))
-
-        return emoji_list
+        return EmojiListItem.from_entries(entries=data)
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         subquery_emoji_name = '?'
@@ -156,7 +166,7 @@ class EmojiSqlite(BaseEmojiDatabase):
             DO UPDATE SET use_count=use_count + 1;
         """
 
-        logger.debug('increase_usecount() query built: %s', query)
+        logger.debug('EmojiSqlite.increase_usecount() query built: %s', query)
 
         try:
             with closing(self.conn.cursor()) as cursor:

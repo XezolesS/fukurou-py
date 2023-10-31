@@ -10,7 +10,7 @@ from discord import (
 from discord.colour import Colour
 from discord.ext.pages import Paginator, PaginatorButton
 
-from .data import Emoji
+from .data import Emoji, EmojiListItem
 from .exceptions import EmojiError
 
 class EmojiEmbed(Embed):
@@ -64,7 +64,7 @@ class EmojiListPage(Paginator):
             PaginatorButton('last', label='⯮', style=ButtonStyle.green)
         ]
 
-    def __build_pages(self, emoji_list: list[Emoji]):
+    def __build_pages(self, emoji_list: list[EmojiListItem]):
         emoji_count = len(emoji_list)
         title = 'Emoji List'
 
@@ -88,7 +88,8 @@ class EmojiListPage(Paginator):
             # Add emoji info
             embed.add_field(
                 name = f':small_blue_diamond: {emoji.emoji_name}',
-                value = f'Uploaded by {uploader} at `{created_at}`',
+                value = f"""Total **{emoji.use_count}** time(s) used.
+                            Uploaded by {uploader} at `{created_at}`""",
                 inline = False
             )
 
