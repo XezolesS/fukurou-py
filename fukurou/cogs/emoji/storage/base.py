@@ -12,7 +12,7 @@ class BaseEmojiStorage(ABC):
     def _setup(self) -> None:
         """
         A method for setting up the storage connection. 
-        This method will be called when `__init__` is called.
+        This method will be called in `__init__()`.
         """
         raise NotImplementedError("BaseEmojiStorage._setup() is not implemented!")
 

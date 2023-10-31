@@ -48,8 +48,8 @@ class EmojiCog(commands.Cog):
         try:
             EmojiManager().add(
                 guild_id=ctx.guild.id,
-                emoji_name=name,
                 uploader=ctx.author.id,
+                emoji_name=name,
                 attachment=file
             )
         except EmojiError as e:

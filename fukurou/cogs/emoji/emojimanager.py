@@ -67,24 +67,72 @@ class EmojiManager(metaclass=Singleton):
         return file_type.removeprefix('image/')
 
     def register(self, guild_id: int) -> None:
+        """
+        Register a guild for Emoji features.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        """
         self.storage.register(guild_id=guild_id)
 
         logger.info('Guild(%d) is now ready for Emoji.', guild_id)
 
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
+        """
+        Get Emoji object which has a name of `emoji_name`.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+
+        :return: Emoji object, None if there's no such.
+        :rtype: Emoji | None
+        """
         return self.database.get(guild_id=guild_id, emoji_name=emoji_name)
 
     def get_file_loc(self, guild_id: int, emoji: Emoji) -> str | os.PathLike:
+        """
+        Get Emoji file location from `Emoji` object.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param emoji: `Emoji` object.
+        :type emoji: Emoji
+
+        :return: Directory, URL or such path like string.
+        :rtype: str | os.PathLike
+        """
         return os.path.join(self.storage.get_guild_loc(guild_id=guild_id), emoji.file_name)
 
     def add(self, guild_id: int, emoji_name: str, uploader: int, attachment: Attachment) -> None:
+        """
+        Add a Emoji for the guild.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+        :param uploader: Id of the uploader.
+        :type uploader: int
+        :param attachment: `discord.Attachment` object of the Emoji image file.
+        :type attachment: Attachment
+
+        :raises EmojiInvalidNameError: If Emoji name is not matched with the pattern in config.
+        :raises EmojiNameExistsError: If Emoji name is occupied.
+        :raises EmojiFileTypeError: If the type of the file is not supported.
+        :raises EmojiFileTooLargeError: If the file is too large.
+        :raises EmojiFileDownloadError: If failed to download file.
+        :raises EmojiFileExistsError: If the identical file is already in the storage.
+        :raises EmojiFileSaveError: If failed to save file.
+        :raises EmojiDatabaseError: If database operation failed.
+        """
         logger.info("""User(%d) uploading emoji: {
                         Name: %s,
                         File URL: %s,
                         File Size: %d Bytes,
                         File Type: %s
-                    }
-                    """,
+                    }""",
                     uploader,
                     emoji_name,
                     attachment.url,
@@ -164,6 +212,17 @@ class EmojiManager(metaclass=Singleton):
         logger.info('Emoji "%s" is saved at "%s"', emoji_name, file_name)
 
     def delete(self, guild_id: int, emoji_name: str) -> None:
+        """
+        Delete a Emoji from the guild.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+
+        :raises EmojiNotFoundError: If there's no such Emoji.
+        :raises EmojiDatabaseError: If database operation failed.
+        """
         # Check if emoji exists
         emoji = self.database.get(guild_id=guild_id, emoji_name=emoji_name)
         if emoji is None:
@@ -185,6 +244,18 @@ class EmojiManager(metaclass=Singleton):
         self.storage.delete(guild_id=guild_id, file_name=emoji.file_name)
 
     def rename(self, guild_id: int, old_name: str, new_name: str) -> None:
+        """
+        Rename an Emoji.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param old_name: Old name of the Emoji.
+        :type old_name: str
+        :param new_name: New name of the Emoji.
+        :type new_name: str
+
+        :raises EmojiInvalidNameError: If Emoji name is not matched with the pattern in config.
+        """
         # Check name validity
         if not self.__check_emoji_name(emoji_name=new_name):
             raise EmojiInvalidNameError(
@@ -195,7 +266,29 @@ class EmojiManager(metaclass=Singleton):
         self.database.rename(guild_id=guild_id, old_name=old_name, new_name=new_name)
 
     def list(self, guild_id: int, keyword: str = None) -> list[Emoji]:
+        """
+        Get a list of Emojis in the guild. 
+        If keyword is given, search for the Emojis which contain the kewyord in its name.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param keyword: Keyword to search for.
+        :type keyword: str, optional
+
+        :return: List of the Emojis.
+        :rtype: list[Emoji]
+        """
         return self.database.list(guild_id=guild_id, keyword=keyword)
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
+        """
+        Increase an Emoji use count for the user in the guild.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param user_id: Id of the user who used the Emoji.
+        :type user_id: int
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+        """
         self.database.increase_usecount(guild_id=guild_id, user_id=user_id, emoji_name=emoji_name)
