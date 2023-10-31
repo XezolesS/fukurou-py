@@ -127,7 +127,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
             keyword = f'%{keyword}%'
 
-            keyword_clause = r"AND emoji_name LIKE ? ESCAPE '\'"
+            keyword_clause = r"AND e.emoji_name LIKE ? ESCAPE '\'"
             param += (keyword,)
 
         query = f"""
