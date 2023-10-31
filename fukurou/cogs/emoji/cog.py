@@ -1,16 +1,12 @@
 # pylint: disable=missing-function-docstring
 
 import discord
-from discord import Guild
 from discord.ext import commands
 
 from fukurou.logging import logger
+from .emojimanager import EmojiManager
 from .emojipareser import EmojiParser
 from .exceptions import EmojiError
-from .image import (
-    ImageHandlers,
-    ImageHandler
-)
 from .views import (
     EmojiEmbed,
     EmojiErrorEmbed,
@@ -25,7 +21,6 @@ class EmojiCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.image_handlers = ImageHandlers()
 
     @emoji_commands.command(
         name='add',
@@ -51,69 +46,70 @@ class EmojiCog(commands.Cog):
         await ctx.defer()
 
         try:
-            self.image_handlers[ctx.guild.id].save_emoji(name=name,
-                                                         uploader=ctx.author.id,
-                                                         attachment=file)
+            EmojiManager().add(
+                guild_id=ctx.guild.id,
+                uploader=ctx.author.id,
+                emoji_name=name,
+                attachment=file
+            )
         except EmojiError as e:
             logger.error(e.message_double_quoted())
             await ctx.respond(
                 embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e)
             )
-
-            return
-
-        embed = EmojiEmbed(
-            description=f'**{name}** is uploaded!',
-            image_url=f'attachment://{file.filename}',
-            author=ctx.author
-        )
-        emoji_file = await file.to_file()
-
-        await ctx.followup.send(file=emoji_file, embed=embed)
+        else:
+            await ctx.followup.send(
+                file=await file.to_file(),
+                embed=EmojiEmbed(
+                    description=f'**{name}** is uploaded!',
+                    image_url=f'attachment://{file.filename}',
+                    author=ctx.author
+                )
+            )
 
     @emoji_commands.command()
     async def delete(self,
                      ctx: discord.ApplicationContext,
                      name: str):
         try:
-            self.image_handlers[ctx.guild.id].delete_emoji(name=name)
+            EmojiManager().delete(guild_id=ctx.guild.id, emoji_name=name)
         except EmojiError as e:
             logger.error(e.message_double_quoted())
             await ctx.respond(
                 embed=EmojiErrorEmbed(description=f'Failed to delete **{name}**', error=e)
             )
-
-            return
-
-        embed = EmojiEmbed(
-            description=f'**{name}** has been deleted!'
-        )
-
-        await ctx.respond(embed=embed)
+        else:
+            await ctx.respond(
+                embed=EmojiEmbed(description=f'**{name}** has been deleted!')
+            )
 
     @emoji_commands.command()
     async def rename(self,
                      ctx: discord.ApplicationContext,
                      old_name: str,
                      new_name: str):
-        # TODO: Rename exception handling
-        result = self.image_handlers[ctx.guild.id].rename_emoji(old_name=old_name,
-                                                                new_name=new_name)
-        if result is True:
-            emoji = self.image_handlers[ctx.guild.id].get_emoji(new_name)
-            emoji_file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
-
-            embed = EmojiEmbed(
-                description=f'Emoji `{old_name}` is now `{new_name}`!',
-                image_url=f'attachment://{emoji_file.filename}',
-                author=ctx.author
+        try:
+            EmojiManager().rename(
+                guild_id=ctx.guild.id,
+                old_name=old_name,
+                new_name=new_name
             )
-
-            await ctx.respond(file=emoji_file, embed=embed)
-        else:
+        except EmojiError as e:
             await ctx.respond(
-                embed=EmojiErrorEmbed(
-                    description=f'Cannot rename emoji `{old_name}` to `{new_name}`!'
+                embed=EmojiErrorEmbed(description=e.message_backticked())
+            )
+        else:
+            emoji = EmojiManager().get(guild_id=ctx.guild.id, emoji_name=new_name)
+
+            await ctx.respond(
+                file=discord.File(
+                    fp=EmojiManager().get_file_loc(guild_id=ctx.guild.id, emoji=emoji),
+                    filename=emoji.file_name
+                ),
+                embed=EmojiEmbed(
+                    description=f'Emoji `{old_name}` is now `{new_name}`!',
+                    image_url=f'attachment://{emoji.file_name}',
+                    author=ctx.author
                 )
             )
 
@@ -128,7 +124,7 @@ class EmojiCog(commands.Cog):
         required=False
     )
     async def list(self, ctx: discord.ApplicationContext, keyword: str):
-        emoji_list = self.image_handlers[ctx.guild.id].emoji_list(keyword=keyword)
+        emoji_list = EmojiManager().list(guild_id=ctx.guild.id, keyword=keyword)
 
         if not emoji_list:
             if keyword is None:
@@ -141,7 +137,6 @@ class EmojiCog(commands.Cog):
             return
 
         emoji_page = EmojiListPage(guild=ctx.guild, emoji_list=emoji_list, keyword=keyword)
-
         await emoji_page.respond(ctx.interaction, ephemeral=True)
 
     @commands.Cog.listener('on_message')
@@ -150,39 +145,41 @@ class EmojiCog(commands.Cog):
         if message.author.id == self.bot.user.id:
             return
 
-        image_name = EmojiParser.parse(text=message.content)
-        if image_name is None:
+        emoji_name = EmojiParser.parse(text=message.content)
+        if emoji_name is None:
             return
 
-        emoji = self.image_handlers[message.guild.id].get_emoji(image_name)
+        emoji = EmojiManager().get(guild_id=message.guild.id, emoji_name=emoji_name)
         if emoji is None:
             return
 
         try:
             await message.delete()
-
-            emoji_file = discord.File(fp=emoji.file_path, filename=emoji.file_name)
-
-            embed = EmojiEmbed(
-                image_url=f'attachment://{emoji.file_name}',
-                author=message.author
+            await message.channel.send(
+                file=discord.File(
+                    fp=EmojiManager().get_file_loc(guild_id=message.guild.id, emoji=emoji),
+                    filename=emoji.file_name
+                ),
+                embed=EmojiEmbed(
+                    image_url=f'attachment://{emoji.file_name}',
+                    author=message.author
+                )
             )
-
-            await message.channel.send(file=emoji_file, embed=embed)
         except discord.DiscordException as e:
             logger.error('Cannot send emoji to the user(%d): %s', message.author.id, e.args)
-
-        # Increase usecount when sending emoji succeed
-        self.image_handlers[message.guild.id].increase_emoji_usecount(
-            user=message.author.id,
-            name=emoji.emoji_name
-        )
+        else:
+            # Increase usecount when sending emoji succeed
+            EmojiManager().increase_usecount(
+                guild_id=message.guild.id,
+                user_id=message.author.id,
+                emoji_name=emoji_name
+            )
 
     @commands.Cog.listener('on_ready')
     async def load_guild_emoji(self):
         for guild in self.bot.guilds:
-            self.image_handlers[guild.id] = ImageHandler(guild_id=guild.id)
+            EmojiManager().register(guild_id=guild.id)
 
     @commands.Cog.listener('on_guild_join')
     async def init_guild_emoji(self, guild: discord.Guild):
-        self.image_handlers[guild.id] = ImageHandler(guild_id=guild.id)
+        EmojiManager().register(guild_id=guild.id)

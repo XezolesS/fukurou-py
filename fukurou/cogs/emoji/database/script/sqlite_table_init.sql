@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS emoji (
     guild_id INTEGER,
     emoji_name TEXT,
     uploader_id INTEGER NOT NULL,
-    file_path TEXT NOT NULL,
+    file_name TEXT NOT NULL,
     created_at DATETIME,
     PRIMARY KEY (guild_id, emoji_name)
 );

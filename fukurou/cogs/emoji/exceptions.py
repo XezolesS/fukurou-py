@@ -58,10 +58,20 @@ class EmojiFileExistsError(EmojiError):
         self.file_name = file_name
         self.directory = directory
 
+class EmojiFileDeleteError(EmojiError):
+    @property
+    def desc(self) -> str:
+        return 'Failed to Delete File'
+
 class EmojiFileDownloadError(EmojiError):
     @property
     def desc(self) -> str:
         return 'Failed to Download File'
+
+class EmojiFileNotFoundError(EmojiError):
+    @property
+    def desc(self) -> str:
+        return 'Emoji File Not Found'
 
 class EmojiFileSaveError(EmojiError):
     @property
