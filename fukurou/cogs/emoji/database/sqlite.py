@@ -143,19 +143,24 @@ class EmojiSqlite(BaseEmojiDatabase):
         return emoji_list
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
-        try:
-            # Increase use count, create a record if it's not exist
-            with closing(self.conn.cursor()) as cursor:
-                query = """
-                    INSERT OR IGNORE INTO emoji_use VALUES (?, ?, ?, ?);
-                """
-                cursor.execute(query, (guild_id, user_id, emoji_name, 0))
+        subquery_emoji_name = '?'
+        if configs.get_config('emoji').ignore_spaces is True:
+            subquery_emoji_name = """(
+                SELECT emoji_name FROM emoji WHERE replace(emoji_name, ' ', '')=?
+            )"""
+            emoji_name = emoji_name.replace(' ', '')
 
-                query = """
-                    UPDATE emoji_use SET use_count=use_count + 1
-                    WHERE guild_id=? AND user_id=? AND emoji_name=?;
-                """
-                cursor.execute(query, (guild_id, user_id, emoji_name))
+        query = f"""
+            INSERT OR IGNORE INTO emoji_use VALUES (?, ?, {subquery_emoji_name}, ?)
+            ON CONFLICT(guild_id, user_id, emoji_name)
+            DO UPDATE SET use_count=use_count + 1;
+        """
+
+        logger.debug('increase_usecount() query built: %s', query)
+
+        try:
+            with closing(self.conn.cursor()) as cursor:
+                cursor.execute(query, (guild_id, user_id, emoji_name, 1))
         except sqlite3.Error as e:
             self.conn.rollback()
             raise EmojiDatabaseError() from e
