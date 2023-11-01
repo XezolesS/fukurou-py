@@ -132,7 +132,10 @@ class EmojiCog(commands.Cog):
             else:
                 message = f"I can't find the emoji that contains `{keyword}` in its name!"
 
-            await ctx.respond(embed=EmojiErrorEmbed(description=message))
+            await ctx.response.send_message(
+                embed=EmojiErrorEmbed(description=message),
+                ephemeral=True
+            )
 
             return
 
