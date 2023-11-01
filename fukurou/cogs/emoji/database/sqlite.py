@@ -4,7 +4,7 @@ import sqlite3
 
 from fukurou.configs import configs
 from fukurou.logging import logger
-from fukurou.cogs.emoji.data import Emoji, EmojiListItem
+from fukurou.cogs.emoji.data import Emoji, EmojiList
 from fukurou.cogs.emoji.exceptions import EmojiDatabaseError
 from .base import BaseEmojiDatabase
 
@@ -116,7 +116,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
         self.conn.commit()
 
-    def list(self, guild_id: int, keyword: str = None) -> list[EmojiListItem]:
+    def list(self, guild_id: int, keyword: str = None) -> EmojiList:
         param = (guild_id,)
 
         keyword_clause = ''
@@ -150,7 +150,7 @@ class EmojiSqlite(BaseEmojiDatabase):
             result = cursor.execute(query, param)
             data = result.fetchall()
 
-        return EmojiListItem.from_entries(entries=data)
+        return EmojiList(entries=data)
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         subquery_emoji_name = '?'

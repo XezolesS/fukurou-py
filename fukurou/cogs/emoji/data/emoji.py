@@ -73,37 +73,41 @@ class EmojiListItem:
     def use_count(self) -> int:
         return self.__use_count
 
-    def __init__(self,
-                 emoji_name: str,
-                 uploader_id: int,
-                 created_at: datetime,
-                 use_count: int) -> None:
-        self.__emoji_name = emoji_name
-        self.__uploader_id = uploader_id
-        self.__created_at = created_at
-        self.__use_count = use_count
-
-    @classmethod
-    def from_entry(cls, entry: Tuple) -> EmojiListItem | None:
+    def __init__(self, entry: Tuple) -> None:
         if not isinstance(entry, Tuple):
-            return None
+            return
 
         try:
-            return EmojiListItem(
-                emoji_name=entry[0],
-                uploader_id=int(entry[1]),
-                created_at=datetime.fromisoformat(entry[2]),
-                use_count=int(entry[3])
-            )
+            self.__emoji_name = entry[0]
+            self.__uploader_id = int(entry[1])
+            self.__created_at = datetime.fromisoformat(entry[2])
+            self.__use_count = int(entry[3])
         except ValueError:
-            return None
+            return
         except TypeError:
-            return None
+            return
 
-    @classmethod
-    def from_entries(cls, entries: list[Tuple]) -> list[EmojiListItem]:
-        emoji_list = []
+class EmojiList:
+    def __init__(self, entries: list[Tuple]) -> None:
+        self.__cur = -1
+        self.__data = []
+
         for e in entries:
-            emoji_list.append(EmojiListItem.from_entry(entry=e))
+            self.__data.append(EmojiListItem(entry=e))
 
-        return emoji_list
+    def __len__(self):
+        return len(self.__data)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self) -> EmojiListItem:
+        self.__cur += 1
+
+        if self.__cur < len(self.__data):
+            return self.__data[self.__cur]
+
+        raise StopIteration
+
+    def __getitem__(self, key) -> EmojiListItem:
+        return self.__data[self.__cur]

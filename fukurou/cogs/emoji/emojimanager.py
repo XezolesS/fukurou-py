@@ -19,7 +19,7 @@ from fukurou.cogs.emoji.exceptions import (
 )
 from fukurou.patterns import Singleton
 from . import database, storage
-from .data import Emoji, EmojiListItem
+from .data import Emoji, EmojiList
 
 ALLOWED_FILETYPES: Final = {
     'image/jpeg',
@@ -265,7 +265,7 @@ class EmojiManager(metaclass=Singleton):
 
         self.database.rename(guild_id=guild_id, old_name=old_name, new_name=new_name)
 
-    def list(self, guild_id: int, keyword: str = None) -> list[EmojiListItem]:
+    def list(self, guild_id: int, keyword: str = None) -> EmojiList:
         """
         Get a list of Emojis in the guild. 
         If keyword is given, search for the Emojis which contain the kewyord in its name.
