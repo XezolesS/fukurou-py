@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from fukurou.cogs.emoji.data import Emoji
+from fukurou.cogs.emoji.data import Emoji, EmojiList
 
 class BaseEmojiDatabase(ABC):
     """
@@ -90,18 +90,23 @@ class BaseEmojiDatabase(ABC):
         raise NotImplementedError("BaseEmojiDatabase.rename() is not implemented!")
 
     @abstractmethod
-    def list(self, guild_id: int, keyword: str = None) -> list[Emoji]:
+    def list(self, user_id: int, guild_id: int, keyword: str = None) -> EmojiList:
         """
-        Make a list of Emojis of the guild. 
-        If keyword is given, search for the Emojis which contain the kewyord in its name.
+        Build a list of Emojis with its details in the guild. 
+        It has details both for the user and the guild. 
 
+        If `keyword` is given, it only stores the Emojis 
+        which contain the kewyord in its name.
+
+        :param user_id: Id of the user.
+        :type user_id: int
         :param guild_id: Id of the guild.
         :type guild_id: int
         :param keyword: Keyword to search for.
         :type keyword: str, optional
 
         :return: List of the Emojis.
-        :rtype: list[Emoji]
+        :rtype: EmojiList
         """
         raise NotImplementedError("BaseEmojiDatabase.list() is not implemented!")
 

@@ -124,7 +124,11 @@ class EmojiCog(commands.Cog):
         required=False
     )
     async def list(self, ctx: discord.ApplicationContext, keyword: str):
-        emoji_list = EmojiManager().list(guild_id=ctx.guild.id, keyword=keyword)
+        emoji_list = EmojiManager().list(
+            user_id=ctx.author.id,
+            guild_id=ctx.guild.id,
+            keyword=keyword
+        )
 
         if not emoji_list:
             if keyword is None:

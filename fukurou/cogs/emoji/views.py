@@ -85,12 +85,13 @@ class EmojiListPage(Paginator):
             local_tz = datetime.now().tzinfo
             created_at = emoji.created_at.astimezone(tz=local_tz).strftime('%Y/%m/%d %H:%M:%S')
 
+            use_count_str = f'({emoji.user_use_count}/{emoji.guild_use_count})'
+
             # Add emoji info
             embed.add_field(
-                name = f':small_blue_diamond: {emoji.emoji_name}',
-                value = f"""Total **{emoji.use_count}** time(s) used.
-                            Uploaded by {uploader} at `{created_at}`""",
-                inline = False
+                name=f':small_blue_diamond: {use_count_str} {emoji.emoji_name}',
+                value=f'Uploaded by {uploader} at `{created_at}`',
+                inline=False
             )
 
         return emoji_pages

@@ -116,8 +116,8 @@ class EmojiSqlite(BaseEmojiDatabase):
 
         self.conn.commit()
 
-    def list(self, guild_id: int, keyword: str = None) -> EmojiList:
-        param = (guild_id,)
+    def list(self, user_id: int, guild_id: int, keyword: str = None) -> EmojiList:
+        param = (user_id, guild_id,)
 
         keyword_clause = ''
         if keyword is not None:
@@ -135,6 +135,11 @@ class EmojiSqlite(BaseEmojiDatabase):
                 e.emoji_name,
                 e.uploader_id,
                 e.created_at,
+                COALESCE(
+                    CASE 
+                        WHEN u.user_id=? THEN u.use_count ELSE 0 
+                    END, 0
+                ) AS user_use_count,
                 COALESCE(SUM(u.use_count), 0) AS use_count
             FROM emoji AS e
             LEFT OUTER JOIN emoji_use AS u
@@ -150,7 +155,7 @@ class EmojiSqlite(BaseEmojiDatabase):
             result = cursor.execute(query, param)
             data = result.fetchall()
 
-        return EmojiList(entries=data)
+        return EmojiList(owner_id=user_id, entries=data)
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         subquery_emoji_name = '?'

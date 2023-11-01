@@ -265,20 +265,25 @@ class EmojiManager(metaclass=Singleton):
 
         self.database.rename(guild_id=guild_id, old_name=old_name, new_name=new_name)
 
-    def list(self, guild_id: int, keyword: str = None) -> EmojiList:
+    def list(self, user_id: int, guild_id: int, keyword: str = None) -> EmojiList:
         """
-        Get a list of Emojis in the guild. 
-        If keyword is given, search for the Emojis which contain the kewyord in its name.
+        Get a list of Emojis with its details in the guild. 
+        The details both for the user and the guild will be retrieved. 
 
+        If `keyword` is given, only the Emojis which contain
+        the kewyord in its name will be retrieved.
+
+        :param user_id: Id of the user.
+        :type user_id: int
         :param guild_id: Id of the guild.
         :type guild_id: int
         :param keyword: Keyword to search for.
         :type keyword: str, optional
 
         :return: List of the Emojis.
-        :rtype: list[Emoji]
+        :rtype: EmojiList
         """
-        return self.database.list(guild_id=guild_id, keyword=keyword)
+        return self.database.list(user_id=user_id, guild_id=guild_id, keyword=keyword)
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         """

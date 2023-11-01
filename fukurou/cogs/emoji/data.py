@@ -70,8 +70,12 @@ class EmojiListItem:
         return self.__created_at
 
     @property
-    def use_count(self) -> int:
-        return self.__use_count
+    def user_use_count(self) -> int:
+        return self.__user_use_count
+
+    @property
+    def guild_use_count(self) -> int:
+        return self.__guild_use_count
 
     def __init__(self, entry: Tuple) -> None:
         if not isinstance(entry, Tuple):
@@ -81,14 +85,20 @@ class EmojiListItem:
             self.__emoji_name = entry[0]
             self.__uploader_id = int(entry[1])
             self.__created_at = datetime.fromisoformat(entry[2])
-            self.__use_count = int(entry[3])
+            self.__user_use_count = int(entry[3])
+            self.__guild_use_count = int(entry[4])
         except ValueError:
             return
         except TypeError:
             return
 
 class EmojiList:
-    def __init__(self, entries: list[Tuple]) -> None:
+    @property
+    def owner_id(self) -> int:
+        return self.__owner_id
+
+    def __init__(self, owner_id: int, entries: list[Tuple]) -> None:
+        self.__owner_id = owner_id
         self.__cur = -1
         self.__data = []
 
@@ -110,4 +120,4 @@ class EmojiList:
         raise StopIteration
 
     def __getitem__(self, key) -> EmojiListItem:
-        return self.__data[self.__cur]
+        return self.__data[key]
