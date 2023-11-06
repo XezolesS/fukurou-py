@@ -116,6 +116,25 @@ class EmojiSqlite(BaseEmojiDatabase):
 
         self.conn.commit()
 
+    def replace(self, guild_id: int, uploader_id: int, emoji_name: str, file_name: str) -> None:
+        param_emoji_name = 'emoji_name'
+        if configs.get_config('emoji').ignore_spaces is True:
+            param_emoji_name = "replace(emoji_name, ' ', '')"
+            emoji_name = emoji_name.replace(' ', '')
+
+        query = f"""
+            UPDATE emoji SET uploader_id=?, file_name=? 
+            WHERE guild_id=? AND {param_emoji_name}=?"""
+
+        try:
+            with closing(self.conn.cursor()) as cursor:
+                cursor.execute(query, (uploader_id, file_name, guild_id, emoji_name))
+        except sqlite3.Error as e:
+            self.conn.rollback()
+            raise EmojiDatabaseError() from e
+
+        self.conn.commit()
+
     def list(self, user_id: int, guild_id: int, keyword: str = None) -> EmojiList:
         param = (user_id, guild_id,)
 

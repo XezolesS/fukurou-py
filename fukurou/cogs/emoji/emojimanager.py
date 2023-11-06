@@ -253,9 +253,18 @@ class EmojiManager(metaclass=Singleton):
         :type old_name: str
         :param new_name: New name of the Emoji.
         :type new_name: str
-
+        
+        :raises EmojiNotFoundError: If there's no such Emoji.
         :raises EmojiInvalidNameError: If Emoji name is not matched with the pattern in config.
         """
+        # Check if emoji exists
+        emoji = self.database.get(guild_id=guild_id, emoji_name=old_name)
+        if emoji is None:
+            raise EmojiNotFoundError(
+                message='There is no emoji named %s',
+                message_args=(old_name,)
+            )
+
         # Check name validity
         if not self.__check_emoji_name(emoji_name=new_name):
             raise EmojiInvalidNameError(
@@ -264,6 +273,97 @@ class EmojiManager(metaclass=Singleton):
             )
 
         self.database.rename(guild_id=guild_id, old_name=old_name, new_name=new_name)
+
+    def replace(self,
+                guild_id: int,
+                emoji_name: str,
+                uploader: int,
+                attachment: Attachment) -> None:
+        """
+        Replace an image of the Emoji.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+        :param uploader: Id of the uploader.
+        :type uploader: int
+        :param attachment: `discord.Attachment` object of the Emoji image file.
+        :type attachment: Attachment
+
+        :raises EmojiNotFoundError: If there's no such Emoji.
+        :raises EmojiFileTypeError: If the type of the file is not supported.
+        :raises EmojiFileTooLargeError: If the file is too large.
+        :raises EmojiFileDownloadError: If failed to download file.
+        :raises EmojiFileExistsError: If the identical file is already in the storage.
+        :raises EmojiFileSaveError: If failed to save file.
+        :raises EmojiDatabaseError: If database operation failed.
+        """
+        # Check if emoji exists
+        old_emoji = self.database.get(guild_id=guild_id, emoji_name=emoji_name)
+        if old_emoji is None:
+            raise EmojiNotFoundError(
+                message='There is no emoji named %s',
+                message_args=(emoji_name,)
+            )
+
+        # Check if the file is image
+        ext = self.__verify_file_type(file_type=attachment.content_type)
+        if ext is None:
+            raise EmojiFileTypeError(
+                message='*.%s is invalid file type for Emoji.',
+                message_args=(ext,)
+            )
+
+        # Check the file size
+        if attachment.size > 8*1024*1024:
+            raise EmojiFileTooLargeError(
+                message='Image file(%.2f MB) is larger than the size limit(%d MB).',
+                message_args=(attachment.size/1024/1024, 8,)
+            )
+
+        # Download file from url
+        try:
+            response = requests.get(url=attachment.url, stream=True, timeout=10)
+            response.raise_for_status()
+
+            image = response.content
+        except requests.exceptions.RequestException as e:
+            raise EmojiFileDownloadError(
+                e.args,
+                message='Error occured while downloading a file.'
+            ) from e
+
+        # Save image to the storage
+        try:
+            file_name = self.storage.save(guild_id=guild_id, file=image, ext=ext)
+        except EmojiFileExistsError as e:
+            raise EmojiFileExistsError(
+                message='Image %s is already exist in %s',
+                message_args=(e.file_name, e.directory)
+            ) from e
+        except EmojiFileSaveError as e:
+            raise EmojiFileSaveError(
+                e.args,
+                message='Error occured while saving a file'
+            ) from e
+
+        # Replace emoji file_name from the database
+        try:
+            self.database.replace(guild_id=guild_id,
+                                  emoji_name=emoji_name,
+                                  uploader_id=uploader,
+                                  file_name=file_name)
+        except EmojiDatabaseError as e:
+            self.storage.delete(guild_id=guild_id, file_name=file_name)
+
+            raise EmojiDatabaseError(
+                message='Error occured while saving emoji data: %s',
+                message_args=(e.args,)
+            ) from e
+
+        # Delete old emoji file
+        self.storage.delete(guild_id=guild_id, file_name=old_emoji.file_name)
 
     def list(self, user_id: int, guild_id: int, keyword: str = None) -> EmojiList:
         """

@@ -90,6 +90,24 @@ class BaseEmojiDatabase(ABC):
         raise NotImplementedError("BaseEmojiDatabase.rename() is not implemented!")
 
     @abstractmethod
+    def replace(self, guild_id: int, uploader_id: int, emoji_name: str, file_name: str) -> None:
+        """
+        Replace Emoji data in the database.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+        :param uploader_id: Id of the uploader.
+        :type uploader_id: str
+        :param file_name: Name of the file.
+        :type file_name: str
+
+        :raises EmojiDatabaseError: If database operation failed.
+        """
+        raise NotImplementedError("BaseEmojiDatabase.replace() is not implemented!")
+
+    @abstractmethod
     def list(self, user_id: int, guild_id: int, keyword: str = None) -> EmojiList:
         """
         Build a list of Emojis with its details in the guild. 

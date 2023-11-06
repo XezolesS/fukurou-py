@@ -149,6 +149,52 @@ class EmojiCog(commands.Cog):
             )
 
     @emoji_commands.command(
+        name="replace",
+        description="Replace the image of the emoji."
+    )
+    @discord.commands.option(
+        input_type=str,
+        name='name',
+        description='Name of the emoji.',
+        required=True
+    )
+    @discord.commands.option(
+        input_type=discord.Attachment,
+        name='file',
+        description='Image file of the emoji.',
+        required=True
+    )
+    @emoji_managable()
+    async def replace(self,
+                      ctx: discord.ApplicationContext,
+                      name: str,
+                      file: discord.Attachment):
+        # This task can take longer than 3 seconds
+        await ctx.defer()
+
+        try:
+            EmojiManager().replace(
+                guild_id=ctx.guild.id,
+                uploader=ctx.author.id,
+                emoji_name=name,
+                attachment=file
+            )
+        except EmojiError as e:
+            logger.error(e.message_double_quoted())
+            await ctx.respond(
+                embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e)
+            )
+        else:
+            await ctx.followup.send(
+                file=await file.to_file(),
+                embed=EmojiEmbed(
+                    description=f'**{name}** is replaced!',
+                    image_url=f'attachment://{file.filename}',
+                    author=ctx.author
+                )
+            )
+
+    @emoji_commands.command(
         name='list',
         description='Shows a list of emoji in the server.'
     )
