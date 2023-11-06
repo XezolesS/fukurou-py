@@ -1,5 +1,5 @@
-# pylint: disable=missing-function-docstring
-
+# pylint: disable=C0114,C0115,C0116
+from typing import Any
 import discord
 from discord.ext import commands
 
@@ -13,10 +13,18 @@ from .views import (
     EmojiListPage
 )
 
+# Decorator for checking permission
+def emoji_managable():
+    def predicate(ctx: discord.ApplicationContext):
+        logger.debug('%s', ctx.channel.permissions_for(ctx.author).manage_emojis)
+        return ctx.channel.permissions_for(ctx.author).manage_emojis
+    return commands.check(predicate=predicate)
+
 class EmojiCog(commands.Cog):
     emoji_commands = discord.SlashCommandGroup(
         name='emoji',
-        description='Command group for managing custom emoji.'
+        description='Command group for managing custom emoji.',
+        guild_only=True
     )
 
     def __init__(self, bot):
@@ -38,6 +46,7 @@ class EmojiCog(commands.Cog):
         description='Image file of the emoji.',
         required=True
     )
+    @emoji_managable()
     async def add(self,
                   ctx: discord.ApplicationContext,
                   name: str,
@@ -67,7 +76,17 @@ class EmojiCog(commands.Cog):
                 )
             )
 
-    @emoji_commands.command()
+    @emoji_commands.command(
+        name="delete",
+        description="Delete the emoji from the server."
+    )
+    @discord.commands.option(
+        input_type=str,
+        name='name',
+        description='Name of the emoji to delete.',
+        required=True
+    )
+    @emoji_managable()
     async def delete(self,
                      ctx: discord.ApplicationContext,
                      name: str):
@@ -83,7 +102,23 @@ class EmojiCog(commands.Cog):
                 embed=EmojiEmbed(description=f'**{name}** has been deleted!')
             )
 
-    @emoji_commands.command()
+    @emoji_commands.command(
+        name="rename",
+        description="Rename the emoji."
+    )
+    @discord.commands.option(
+        input_type=str,
+        name='old_name',
+        description='Name of the emoji you want to rename.',
+        required=True
+    )
+    @discord.commands.option(
+        input_type=str,
+        name='new_name',
+        description='New name for the emoji.',
+        required=True
+    )
+    @emoji_managable()
     async def rename(self,
                      ctx: discord.ApplicationContext,
                      old_name: str,
@@ -190,3 +225,13 @@ class EmojiCog(commands.Cog):
     @commands.Cog.listener('on_guild_join')
     async def init_guild_emoji(self, guild: discord.Guild):
         EmojiManager().register(guild_id=guild.id)
+
+    async def cog_command_error(self, ctx: discord.ApplicationContext, error: Any):
+        if isinstance(error, EmojiError):
+            message=error.message_backticked()
+        elif isinstance(error, discord.CheckFailure):
+            message="You don't have a permission."
+        else:
+            message='Unknown error has occured.'
+
+        await ctx.response.send_message(embed=EmojiErrorEmbed(description=message), ephemeral=True)
