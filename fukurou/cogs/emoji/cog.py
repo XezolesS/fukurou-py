@@ -64,7 +64,8 @@ class EmojiCog(commands.Cog):
         except EmojiError as e:
             logger.error(e.message_double_quoted())
             await ctx.respond(
-                embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e)
+                embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e),
+                ephemeral=True
             )
         else:
             await ctx.followup.send(
@@ -95,7 +96,8 @@ class EmojiCog(commands.Cog):
         except EmojiError as e:
             logger.error(e.message_double_quoted())
             await ctx.respond(
-                embed=EmojiErrorEmbed(description=f'Failed to delete **{name}**', error=e)
+                embed=EmojiErrorEmbed(description=f'Failed to delete **{name}**', error=e),
+                ephemeral=True
             )
         else:
             await ctx.respond(
@@ -131,7 +133,8 @@ class EmojiCog(commands.Cog):
             )
         except EmojiError as e:
             await ctx.respond(
-                embed=EmojiErrorEmbed(description=e.message_backticked())
+                embed=EmojiErrorEmbed(description=e.message_backticked()),
+                ephemeral=True
             )
         else:
             emoji = EmojiManager().get(guild_id=ctx.guild.id, emoji_name=new_name)
@@ -182,7 +185,8 @@ class EmojiCog(commands.Cog):
         except EmojiError as e:
             logger.error(e.message_double_quoted())
             await ctx.respond(
-                embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e)
+                embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e),
+                ephemeral=True
             )
         else:
             await ctx.followup.send(
@@ -273,11 +277,12 @@ class EmojiCog(commands.Cog):
         EmojiManager().register(guild_id=guild.id)
 
     async def cog_command_error(self, ctx: discord.ApplicationContext, error: Any):
-        if isinstance(error, EmojiError):
-            message=error.message_backticked()
-        elif isinstance(error, discord.CheckFailure):
-            message="You don't have a permission."
+        if isinstance(error, discord.CheckFailure):
+            description = "You don't have a permission."
         else:
-            message='Unknown error has occured.'
+            description='Unknown error has occured.'
 
-        await ctx.response.send_message(embed=EmojiErrorEmbed(description=message), ephemeral=True)
+        await ctx.response.send_message(
+            embed=EmojiErrorEmbed(description=description),
+            ephemeral=True
+        )
