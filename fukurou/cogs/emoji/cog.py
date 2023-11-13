@@ -247,16 +247,19 @@ class EmojiCog(commands.Cog):
 
         try:
             await message.delete()
-            await message.channel.send(
+
+            # Must have MANAGE_WEBHOOKS permission!
+            webhook = await message.channel.create_webhook(name=message.author.name)
+            await webhook.send(
+                username=message.author.display_name,
+                avatar_url=message.author.display_avatar.url,
                 file=discord.File(
                     fp=EmojiManager().get_file_loc(guild_id=message.guild.id, emoji=emoji),
                     filename=emoji.file_name
-                ),
-                embed=EmojiEmbed(
-                    image_url=f'attachment://{emoji.file_name}',
-                    author=message.author
                 )
             )
+
+            await webhook.delete()
         except discord.DiscordException as e:
             logger.error('Cannot send emoji to the user(%d): %s', message.author.id, e.args)
         else:
