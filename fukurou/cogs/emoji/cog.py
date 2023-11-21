@@ -260,6 +260,18 @@ class EmojiCog(commands.Cog):
             )
 
             await webhook.delete()
+        except discord.Forbidden:
+            # Send embedded Emoji when there's no permission to create webhook.
+            await message.channel.send(
+                file=discord.File(
+                    fp=EmojiManager().get_file_loc(guild_id=message.guild.id, emoji=emoji),
+                    filename=emoji.file_name
+                ),
+                embed=EmojiEmbed(
+                    image_url=f'attachment://{emoji.file_name}',
+                    author=message.author
+                )
+            )
         except discord.DiscordException as e:
             logger.error('Cannot send emoji to the user(%d): %s', message.author.id, e.args)
         else:
