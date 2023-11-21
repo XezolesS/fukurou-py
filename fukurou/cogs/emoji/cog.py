@@ -32,7 +32,7 @@ class EmojiCog(commands.Cog):
 
     @emoji_commands.command(
         name='add',
-        description='Add custom emoji to the server.'
+        description='Add a custom emoji to the server.'
     )
     @discord.commands.option(
         input_type=str,
@@ -200,7 +200,7 @@ class EmojiCog(commands.Cog):
 
     @emoji_commands.command(
         name='list',
-        description='Shows a list of emoji in the server.'
+        description='Show a list of emoji in the server.'
     )
     @discord.commands.option(
         input_type=str,
