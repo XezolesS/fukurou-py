@@ -1,5 +1,5 @@
 coglist = [
+    'fukurou.cogs.emoji',
     'fukurou.cogs.exchange',
-    'fukurou.cogs.greetings',
     'fukurou.cogs.minigames',
 ]
