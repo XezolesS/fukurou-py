@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from fukurou.configs import configs
+from fukurou.configs import SystemConfig
 from .loghanlder import LogHandler
 
 def init_logger() -> logging.Logger:
@@ -11,8 +11,11 @@ def init_logger() -> logging.Logger:
     logger = logging.getLogger('Fukurou')
     logger.setLevel(logging.DEBUG)
 
-    log_config = configs.get_config('logging')
-    formatter = logging.Formatter(log_config.log_format, log_config.log_time)
+    log_config = SystemConfig().logging
+    formatter = logging.Formatter(
+        fmt=log_config.format.log_msg,
+        datefmt=log_config.format.log_date
+    )
 
     stream_handler = init_stream(fmt=formatter)
     file_handler = init_file(fmt=formatter)

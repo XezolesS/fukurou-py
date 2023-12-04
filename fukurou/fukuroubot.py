@@ -2,9 +2,14 @@ import discord
 from discord.ext.commands import Bot
 
 from . import cogs
-from .logging import logger
+from .configs import SystemConfig
+from .logging import TempLogger
+from .patterns import Singleton
 
-class FukurouBot(Bot):
+class FukurouMeta(type(Bot), type(Singleton)):
+    pass
+
+class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
@@ -15,11 +20,9 @@ class FukurouBot(Bot):
             command_prefix = '!'
         )
 
-def run(token: str):
-    bot = FukurouBot()
+    def run(self):
+        for cog in cogs.coglist:
+            self.load_extension(cog)
+            TempLogger().logger.info('Extension %s has been successfully loaded.', cog)
 
-    for cog in cogs.coglist:
-        bot.load_extension(cog)
-        logger.info('Extension %s has been successfully loaded.', cog)
-
-    bot.run(token)
+        super().run(SystemConfig().token)

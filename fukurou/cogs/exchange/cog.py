@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from fukurou.configs import configs
+from .config import ExchangeConfig
 from .koreaexim import (
     KoreaExIm,
     CURRENCIES
@@ -13,7 +13,7 @@ class ExchangeCog(commands.Cog):
         self.__init_koreaexim()
 
     def __init_koreaexim(self):
-        token = configs.get_config('exchange').token_koreaexim
+        token = ExchangeConfig().token_koreaexim
         self.wrapper = KoreaExIm(token)
 
     @discord.slash_command()

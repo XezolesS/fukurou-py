@@ -1,0 +1,13 @@
+{
+    "token": "INSERT_TOKEN_HERE",
+    "logging": {
+        "directory": "logs",
+        "max_log_files": 50,
+        "format": {
+            "file_name": "%(datetime)s_fukurou.log",
+            "file_date": "%Y-%m-%d_%H-%M-%S",
+            "log_msg": "[%(asctime)s | %(levelname)s] %(name)s\t%(message)s",
+            "log_date": "%m-%d-%Y %H:%M:%S"
+        }
+    }
+}

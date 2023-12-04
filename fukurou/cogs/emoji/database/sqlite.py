@@ -2,10 +2,10 @@ import os
 from contextlib import closing
 import sqlite3
 
-from fukurou.configs import configs
-from fukurou.logging import logger
+from fukurou.cogs.emoji.config import EmojiConfig
 from fukurou.cogs.emoji.data import Emoji, EmojiList
 from fukurou.cogs.emoji.exceptions import EmojiDatabaseError
+from fukurou.logging import TempLogger
 from .base import BaseEmojiDatabase
 
 WILDCARDS = {
@@ -16,23 +16,23 @@ WILDCARDS = {
 
 class EmojiSqlite(BaseEmojiDatabase):
     def _connect(self):
-        db_path = configs.get_config('emoji').database_fullpath
+        db_path = EmojiConfig().database.path
 
         try:
             if not os.path.exists(db_path):
                 os.makedirs(name=db_path, exist_ok=True)
         except OSError as e:
-            logger.error('Cannot create database file: %s', e.strerror)
+            TempLogger().logger.error('Cannot create database file: %s', e.strerror)
         else:
             self.conn = sqlite3.connect(database=db_path)
             self.conn.execute('PRAGMA FOREIGN_KEYS = ON')
 
-            logger.info('Connected to the Emoji database.')
+            TempLogger().logger.info('Connected to the Emoji database.')
 
     def _init_tables(self):
         script_relpath = os.path.join('script',  'sqlite_table_init.sql')
         script_path = os.path.join(os.path.dirname(__file__), script_relpath)
-        logger.debug('Emoji table initialization script found at: %s', script_path)
+        TempLogger().logger.debug('Emoji table initialization script found at: %s', script_path)
 
         try:
             with open(script_path, 'r', encoding='utf8') as file:
@@ -41,17 +41,17 @@ class EmojiSqlite(BaseEmojiDatabase):
             with closing(self.conn.cursor()) as cursor:
                 cursor.executescript(script)
         except IOError as e:
-            logger.error('Error occured while reading initialization script for Emoji databse: %s',
+            TempLogger().logger.error('Error occured while reading initialization script for Emoji databse: %s',
                          e.strerror)
         except sqlite3.DatabaseError as e:
-            logger.error('Error occured while executing script for Emoji databse: %s',
+            TempLogger().logger.error('Error occured while executing script for Emoji databse: %s',
                          e.args)
         else:
-            logger.info('Successfully initialized Emoji database.')
+            TempLogger().logger.info('Successfully initialized Emoji database.')
 
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         param_emoji_name = 'emoji_name'
-        if configs.get_config('emoji').ignore_spaces is True:
+        if EmojiConfig().expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             emoji_name = emoji_name.replace(' ', '')
 
@@ -84,7 +84,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def delete(self, guild_id: int, emoji_name: str) -> None:
         param_emoji_name = 'emoji_name'
-        if configs.get_config('emoji').ignore_spaces is True:
+        if EmojiConfig().expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             emoji_name = emoji_name.replace(' ', '')
 
@@ -101,7 +101,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def rename(self, guild_id: int, old_name: str, new_name: str) -> None:
         param_emoji_name = 'emoji_name'
-        if configs.get_config('emoji').ignore_spaces is True:
+        if EmojiConfig().expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             old_name = old_name.replace(' ', '')
 
@@ -118,7 +118,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def replace(self, guild_id: int, uploader_id: int, emoji_name: str, file_name: str) -> None:
         param_emoji_name = 'emoji_name'
-        if configs.get_config('emoji').ignore_spaces is True:
+        if EmojiConfig().expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             emoji_name = emoji_name.replace(' ', '')
 
@@ -168,7 +168,7 @@ class EmojiSqlite(BaseEmojiDatabase):
             ORDER BY e.emoji_name ASC, use_count DESC, e.created_at ASC;
         """
 
-        logger.debug('EmojiSqlite.list() query built: %s', query)
+        TempLogger().logger.debug('EmojiSqlite.list() query built: %s', query)
 
         with closing(self.conn.cursor()) as cursor:
             result = cursor.execute(query, param)
@@ -178,7 +178,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         subquery_emoji_name = '?'
-        if configs.get_config('emoji').ignore_spaces is True:
+        if EmojiConfig().expression.ignore_spaces is True:
             subquery_emoji_name = """(
                 SELECT emoji_name FROM emoji WHERE replace(emoji_name, ' ', '')=?
             )"""
@@ -190,7 +190,7 @@ class EmojiSqlite(BaseEmojiDatabase):
             DO UPDATE SET use_count=use_count + 1;
         """
 
-        logger.debug('EmojiSqlite.increase_usecount() query built: %s', query)
+        TempLogger().logger.debug('EmojiSqlite.increase_usecount() query built: %s', query)
 
         try:
             with closing(self.conn.cursor()) as cursor:

@@ -1,71 +1,72 @@
-from abc import ABC, abstractmethod
-import json
 import os
+import json
+import shutil
+from abc import ABC, abstractmethod
+from typing import Any
 
-class BaseConfig(ABC):
+from fukurou.patterns import Singleton
+from .exceptions import NewConfigInterrupt
+
+FUKUROU_CONFIG_DIR = 'configs/'
+
+class BaseConfigMeta(type(ABC), type(Singleton)):
+    pass
+
+class BaseConfig(ABC, Singleton, metaclass=BaseConfigMeta):
+    """
+    Abstract class for the config. 
+    Property `file_name` and method `__map()` must be implemented.
+
+    The name of the default config must be a form of `defcon_{file_name}`.
+    Default config must be located under `data/` in the same directory of the source code.
+
+    :cvar file_name: Name of the config file.
+    """
     @property
     @abstractmethod
-    def name(self) -> str:
-        return None
+    def file_name(self) -> str:
+        """
+        Name of the config file.
+        """
+        raise NotImplementedError
 
-    @property
-    def filename(self) -> str:
-        if self.name is None:
-            return None
+    def __init__(self, defcon_dir: str = __file__):
+        self.defcon_dir = os.path.join(os.path.dirname(defcon_dir), 'data')
 
-        return self.name + '.json'
+    def load(self, interrupt_new: bool = False) -> None:
+        """
+        Load a specific config under the directory `./config/`. 
+        If there's no config found, create a new config with default options. 
+        
+        If interrupt_new is set to True, `NewConfigInterrupt` will be 
+        raised if a new config is created.
 
-    @property
+        `IOError` will be raised if something goes wrong while reading a config 
+        or writing a new config.
+
+        :raises IOError: If reading a config or writing a new config is failed.
+        :raises NewConfigInterrupt: If a new config is created.
+        """
+        path = os.path.join(FUKUROU_CONFIG_DIR, self.file_name)
+
+        def read():
+            with open(path, mode='r', encoding='utf8') as file:
+                content = file.read()
+
+            self.map(json.loads(content))
+
+        try:
+            read()
+        except FileNotFoundError as e:
+            src = os.path.join(self.defcon_dir, 'defcon_' + self.file_name)
+
+            shutil.copy2(src, path)
+
+            if interrupt_new is True:
+                raise NewConfigInterrupt from e
+
+            read()
+
     @abstractmethod
-    def keys(self) -> list[str]:
-        return None
-
-    @property
-    def values(self) -> dict[str, any]:
-        return self.__values
-
-    @property
-    def default_values(self) -> dict[str, any]:
-        return {}
-
-    def load(self, directory: str = None):
-        config_path = os.path.join(directory, self.filename)
-
-        # Make new config file if it doesn't exist.
-        if not os.path.exists(config_path):
-            self.init(directory = directory)
-
-        with open(config_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-
-        self.__values = json.loads(content)
-
-    def init(self, directory: str = None):
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        # Validate default value, raise exceptions if it's not valid
-        invalid_keys = []
-        for key in self.keys:
-            try:
-                self.default_values[key]
-            except KeyError:
-                invalid_keys.append(key)
-
-        if len(invalid_keys) > 0:
-            invalid_key_string = "{'" + "', '".join(invalid_keys) + "'}"
-            error_message = 'Cannot find default value of the configs! '
-            error_message += f'(Invalids: {invalid_key_string})'
-
-            raise KeyError(error_message)
-
-        # Create default config file.
-        config_path = os.path.join(directory, self.filename)
-        with open(config_path, 'w', encoding='utf-8') as file:
-            json.dump(self.default_values, file, indent=4)
-
-    def get_value(self, key: str = None) -> any:
-        if key is None:
-            return None
-
-        return self.values[key]
+    def map(self, json_obj: dict[Any]) -> None:
+        raise NotImplementedError

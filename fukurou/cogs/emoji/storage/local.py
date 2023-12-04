@@ -2,28 +2,28 @@ import os
 from os import PathLike
 import hashlib
 
-from fukurou.configs import configs
-from fukurou.logging import logger
+from .base import BaseEmojiStorage
+from fukurou.cogs.emoji.config import EmojiConfig
 from fukurou.cogs.emoji.exceptions import (
     EmojiFileDeleteError,
     EmojiFileExistsError,
     EmojiFileNotFoundError,
     EmojiFileSaveError
 )
-from .base import BaseEmojiStorage
+from fukurou.logging import TempLogger
 
 class LocalEmojiStorage(BaseEmojiStorage):
     def _setup(self):
-        root_dir = configs.get_config('emoji').storage_dir
+        root_dir = EmojiConfig().storage.directory
         abs_root_dir = os.path.abspath(root_dir)
 
         try:
             os.makedirs(abs_root_dir)
-            logger.info('An Emoji storage has been created at: %s', abs_root_dir)
+            TempLogger().logger.info('An Emoji storage has been created at: %s', abs_root_dir)
         except FileExistsError:
-            logger.info('An Emoji stroage is located at: %s', abs_root_dir)
+            TempLogger().logger.info('An Emoji stroage is located at: %s', abs_root_dir)
         except OSError as e:
-            logger.error('Error occured while setting up Emoji storage: %s', e.strerror)
+            TempLogger().logger.error('Error occured while setting up Emoji storage: %s', e.strerror)
         finally:
             self.directory = abs_root_dir
 
@@ -35,11 +35,11 @@ class LocalEmojiStorage(BaseEmojiStorage):
 
         try:
             os.makedirs(guild_dir)
-            logger.info('Registered a new Emoji storage for guild(%d).', guild_id)
+            TempLogger().logger.info('Registered a new Emoji storage for guild(%d).', guild_id)
         except FileExistsError:
-            logger.info('Found a registered Emoji storage for guild(%d).', guild_id)
+            TempLogger().logger.info('Found a registered Emoji storage for guild(%d).', guild_id)
         except OSError as e:
-            logger.error('Error occured while registering Emoji storage for guild(%d): %s',
+            TempLogger().logger.error('Error occured while registering Emoji storage for guild(%d): %s',
                          guild_id, e.strerror)
 
     def get(self, guild_id: int, file_name: str, **kwargs) -> str | PathLike:

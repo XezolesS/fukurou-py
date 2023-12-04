@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from fukurou.configs import configs
+from fukurou.configs import SystemConfig
 
 class LogHandler:
     """
@@ -37,11 +37,11 @@ class LogHandler:
         return self.__time_format
 
     def __init__(self):
-        log_config = configs.get_config('logging')
+        log_config = SystemConfig().logging
         self.__directory = log_config.directory
-        self.__max_logs = log_config.max_logs
-        self.__name_format = log_config.file_name
-        self.__time_format = log_config.file_time
+        self.__max_logs = log_config.max_log_files
+        self.__name_format = log_config.format.file_name
+        self.__time_format = log_config.format.file_date
 
         # Create log directory if it doesn't exist.
         if not os.path.exists(self.directory):
