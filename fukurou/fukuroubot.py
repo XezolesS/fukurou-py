@@ -1,9 +1,9 @@
+import logging
 import discord
 from discord.ext.commands import Bot
 
 from . import cogs
 from .configs import SystemConfig
-from .logging import TempLogger
 from .patterns import Singleton
 
 class FukurouMeta(type(Bot), type(Singleton)):
@@ -11,6 +11,8 @@ class FukurouMeta(type(Bot), type(Singleton)):
 
 class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
     def __init__(self):
+        self.logger = logging.getLogger('fukurou')
+
         intents = discord.Intents.default()
         intents.message_content = True
         intents.members = True
@@ -23,6 +25,6 @@ class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
     def run(self):
         for cog in cogs.coglist:
             self.load_extension(cog)
-            TempLogger().logger.info('Extension %s has been successfully loaded.', cog)
+            self.logger.info('Extension %s has been successfully loaded.', cog)
 
         super().run(SystemConfig().token)

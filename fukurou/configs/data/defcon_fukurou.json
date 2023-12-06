@@ -1,13 +1,46 @@
 {
     "token": "INSERT_TOKEN_HERE",
     "logging": {
-        "directory": "logs",
-        "max_log_files": 50,
-        "format": {
-            "file_name": "%(datetime)s_fukurou.log",
-            "file_date": "%Y-%m-%d_%H-%M-%S",
-            "log_msg": "[%(asctime)s | %(levelname)s] %(name)s\t%(message)s",
-            "log_date": "%m-%d-%Y %H:%M:%S"
+        "version": 1,
+        "formatters": {
+            "fmt_console": {
+                "format": "[%(asctime)s | %(name)s %(levelname)s] %(message)s",
+                "datefmt": "%m-%d-%Y %H:%M:%S"
+            },
+            "fmt_file": {
+                "format": "[%(asctime)s | %(name)s %(levelname)s] %(message)s",
+                "datefmt": "%m-%d-%Y %H:%M:%S"
+            }
+        },
+        "filters": {
+
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "fmt_console",
+                "level": "INFO",
+                "stream": "ext://sys.stdout"
+            },
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "formatter": "fmt_file",
+                "level": "INFO",
+                "filename": "logs/fukurou.log",
+                "maxBytes": 1024,
+                "backupCount": 10
+            }
+        },
+        "loggers": {
+            "fukurou": {
+                "level": "INFO",
+                "propagate": false,
+                "handlers": [ "console", "file" ]
+            }
+        },
+        "root": {
+            "level": "INFO",
+            "handlers": [ "console", "file" ]
         }
     }
 }

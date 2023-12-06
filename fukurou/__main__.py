@@ -1,7 +1,8 @@
 import sys
+import logging
+import logging.config
 
 from .configs import SystemConfig, NewConfigInterrupt
-from .logging import TempLogger
 from .fukuroubot import FukurouBot
 
 CONFIG_CREATED_MESSAGE = """ERROR: Config not found.
@@ -17,6 +18,7 @@ if __name__ == '__main__':
         print(CONFIG_CREATED_MESSAGE)
         sys.exit()
 
-    TempLogger().init()
+    # Load logging config
+    logging.config.dictConfig(SystemConfig().logging)
 
     FukurouBot().run()

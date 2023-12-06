@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 from os import PathLike
+import logging
 
 class BaseEmojiStorage(ABC):
     """
     Abstract class for interacting with the Emoji storage.
     """
     def __init__(self) -> None:
+        self.logger = logging.getLogger('fukurou.emoji.storage')
         self._setup()
 
     @abstractmethod

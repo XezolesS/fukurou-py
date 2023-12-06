@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import logging
 
 from fukurou.cogs.emoji.data import Emoji, EmojiList
 
@@ -7,6 +8,7 @@ class BaseEmojiDatabase(ABC):
     Abstract class to communicate with the Emoji database.
     """
     def __init__(self) -> None:
+        self.logger = logging.getLogger('fukurou.emoji.database')
         self._connect()
         self._init_tables()
 

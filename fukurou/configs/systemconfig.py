@@ -18,7 +18,7 @@ class SystemConfig(BaseConfig):
         self.token = json_obj['token']
 
         # Logging
-        self.logging = self.LoggingConfig(json_obj['logging'])
+        self.logging = json_obj['logging']
 
     class LoggingConfig:
         def __init__(self, json_obj: dict[Any]):

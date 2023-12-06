@@ -1,8 +1,10 @@
 import os
+import logging
 import re
 import requests
 from typing import Final
 from discord import Attachment
+from fukurou.patterns import SingletonMeta
 
 from . import database, storage
 from .config import EmojiConfig
@@ -18,8 +20,6 @@ from .exceptions import (
     EmojiInvalidNameError,
     EmojiNotFoundError
 )
-from fukurou.logging import TempLogger
-from fukurou.patterns import SingletonMeta
 
 ALLOWED_FILETYPES: Final = {
     'image/jpeg',
@@ -37,6 +37,7 @@ class EmojiManager(metaclass=SingletonMeta):
     def __init__(self) -> None:
         self.database = self.__get_database_strategy()
         self.storage = self.__get_storage_strategy()
+        self.logger = logging.getLogger('fukurou.emoji')
 
     def __get_database_strategy(self) -> database.BaseEmojiDatabase | None:
         database_type = EmojiConfig().database.type
@@ -44,7 +45,7 @@ class EmojiManager(metaclass=SingletonMeta):
             case 'sqlite':
                 return database.EmojiSqlite()
 
-        TempLogger().logger.error('There is no support for database %s.', database_type)
+        self.logger.error('There is no support for database %s.', database_type)
         return None
 
     def __get_storage_strategy(self) -> storage.BaseEmojiStorage | None:
@@ -53,7 +54,7 @@ class EmojiManager(metaclass=SingletonMeta):
             case 'local':
                 return storage.LocalEmojiStorage()
 
-        TempLogger().logger.error('There is no support for storage %s.', storage_type)
+        self.logger.error('There is no support for storage %s.', storage_type)
         return None
 
     def __check_emoji_name(self, emoji_name: str) -> bool:
@@ -75,7 +76,7 @@ class EmojiManager(metaclass=SingletonMeta):
         """
         self.storage.register(guild_id=guild_id)
 
-        TempLogger().logger.info('Guild(%d) is now ready for Emoji.', guild_id)
+        self.logger.info('Guild(%d) is now ready for Emoji.', guild_id)
 
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         """
@@ -127,17 +128,12 @@ class EmojiManager(metaclass=SingletonMeta):
         :raises EmojiFileSaveError: If failed to save file.
         :raises EmojiDatabaseError: If database operation failed.
         """
-        TempLogger().logger.info("""User(%d) uploading emoji: {
-                        Name: %s,
-                        File URL: %s,
-                        File Size: %d Bytes,
-                        File Type: %s
-                    }""",
-                    uploader,
-                    emoji_name,
-                    attachment.url,
-                    attachment.size,
-                    attachment.content_type)
+        self.logger.info('User(%d) is uploading emoji "%s"', uploader, emoji_name)
+        self.logger.debug('Detail: {Name: %s, File URL: %s, File Size: %d Bytes, File Type: %s}',
+                          emoji_name,
+                          attachment.url,
+                          attachment.size,
+                          attachment.content_type)
 
         # Check name validity
         if not self.__check_emoji_name(emoji_name=emoji_name):
@@ -209,7 +205,7 @@ class EmojiManager(metaclass=SingletonMeta):
                 message_args=(e.args,)
             ) from e
 
-        TempLogger().logger.info('Emoji "%s" is saved at "%s"', emoji_name, file_name)
+        self.logger.info('Emoji "%s" is saved at "%s"', emoji_name, file_name)
 
     def delete(self, guild_id: int, emoji_name: str) -> None:
         """
