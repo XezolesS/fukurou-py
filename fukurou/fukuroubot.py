@@ -2,7 +2,6 @@ import logging
 import discord
 from discord.ext.commands import Bot
 
-from . import cogs
 from .configs import SystemConfig
 from .patterns import Singleton
 
@@ -23,8 +22,31 @@ class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
         )
 
     def run(self):
-        for cog in cogs.coglist:
-            self.load_extension(cog)
-            self.logger.info('Extension %s has been successfully loaded.', cog)
+        config = SystemConfig()
 
-        super().run(SystemConfig().token)
+        loaded = 0
+        failed = 0
+        for ext in config.extensions:
+            try:
+                self.load_extension(ext)
+                self.logger.info('Extension %s has been successfully loaded.', ext)
+                loaded += 1
+            except discord.ExtensionNotFound as e:
+                self.logger.error(e.args[0])
+                failed += 1
+            except discord.ExtensionAlreadyLoaded as e:
+                self.logger.error(e.args[0])
+                failed += 1
+            except discord.NoEntryPointError as e:
+                self.logger.error(e.args[0])
+                failed += 1
+            except discord.ExtensionFailed as e:
+                self.logger.error(e.args[0])
+                failed += 1
+
+        self.logger.info(
+            'A total of %d extensions were loaded successfully, while %d failed to load.',
+            loaded, failed
+        )
+
+        super().run(config.token)

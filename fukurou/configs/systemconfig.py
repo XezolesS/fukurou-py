@@ -8,14 +8,18 @@ class SystemConfig(BaseConfig):
         return 'fukurou.json'
 
     def __init__(self):
-        self.token = None
-        self.logging = None
+        self.token: str = None
+        self.extensions: list[str] = None
+        self.logging: self.LoggingConfig = None
 
         super().__init__(defcon_dir=__file__)
 
     def map(self, json_obj: dict[Any]) -> None:
         # Credentials
         self.token = json_obj['token']
+
+        # Cogs to load
+        self.extensions = json_obj['extensions']
 
         # Logging
         self.logging = json_obj['logging']
