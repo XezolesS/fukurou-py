@@ -1,88 +1,41 @@
 import os
+from typing import Any
 
-from fukurou.configs import BaseConfig, add_config
-from fukurou.logging import logger
+from fukurou.configs import BaseConfig
 
 class EmojiConfig(BaseConfig):
     @property
-    def name(self) -> str:
-        return 'emoji'
+    def file_name(self) -> str:
+        return 'emoji.json'
 
-    @property
-    def keys(self) -> list[str]:
-        return [
-            'expression'
-            'database',
-            'storage'
-        ]
+    def __init__(self):
+        self.expression = None
+        self.database = None
+        self.storage = None
 
-    @property
-    def default_values(self) -> dict[str, any]:
-        return {
-            'expression': {
-                'pattern': '[a-zA-Z0-9_ -]+',
-                'opening': ';',
-                'closing': ';',
-                'ignore_spaces': True
-            },
-            'database': {
-                'type': 'sqlite',
-                'file': 'emoji.db',
-                'directory': './databases'
-            },
-            'storage': {
-                'type': 'local',
-                'directory': './images'
-            }
-        }
+        super().__init__(defcon_dir=__file__)
 
-    @property
-    def expression_pattern(self) -> str:
-        return self.get_value('expression')['pattern']
+    def map(self, json_obj: dict[Any]) -> None:
+        self.expression = self.EmojiExpressionConfig(json_obj['expression'])
+        self.database = self.EmojiDatabaseConfig(json_obj['database'])
+        self.storage = self.EmojiStorageConfig(json_obj['storage'])
 
-    @property
-    def expression_opening(self) -> str:
-        return self.get_value('expression')['opening']
+    class EmojiExpressionConfig:
+        def __init__(self, json_obj: dict[Any]):
+            self.name_pattern = json_obj['name_pattern']
+            self.opening = json_obj['opening']
+            self.closing = json_obj['closing']
+            self.ignore_spaces = json_obj['ignore_spaces']
+            self.pattern = f'^{self.opening}{self.name_pattern}{self.closing}$'
 
-    @property
-    def expression_closing(self) -> str:
-        return self.get_value('expression')['closing']
+    class EmojiDatabaseConfig:
+        def __init__(self, json_obj: dict[Any]):
+            self.type = json_obj['type']
+            self.file = json_obj['file']
+            self.directory = json_obj['directory']
+            self.path = os.path.abspath(os.path.join(self.directory, self.file))
 
-    @property
-    def expression(self) -> str:
-        pattern = self.get_value('expression')['pattern']
-        opening = self.get_value('expression')['opening']
-        closing = self.get_value('expression')['closing']
-
-        return f'^{opening}{pattern}{closing}$'
-
-    @property
-    def ignore_spaces(self) -> bool:
-        return self.get_value('expression')['ignore_spaces']
-
-    @property
-    def database_type(self) -> str:
-        return self.get_value('database')['type']
-
-    @property
-    def database_file(self) -> str:
-        return self.get_value('database')['file']
-
-    @property
-    def database_dir(self) -> str:
-        return self.get_value('database')['directory']
-
-    @property
-    def database_fullpath(self) -> str:
-        return os.path.abspath(os.path.join(self.database_dir, self.database_file))
-
-    @property
-    def storage_type(self) -> str:
-        return self.get_value('storage')['type']
-
-    @property
-    def storage_dir(self) -> str:
-        return self.get_value('storage')['directory']
-
-add_config(EmojiConfig())
- 
+    class EmojiStorageConfig:
+        def __init__(self, json_obj: dict[Any]):
+            self.type = json_obj['type']
+            self.directory = json_obj['directory']

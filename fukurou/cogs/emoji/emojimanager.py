@@ -1,12 +1,15 @@
 import os
+import logging
 import re
 import requests
 from typing import Final
 from discord import Attachment
+from fukurou.patterns import SingletonMeta
 
-from fukurou.configs import configs
-from fukurou.logging import logger
-from fukurou.cogs.emoji.exceptions import (
+from . import database, storage
+from .config import EmojiConfig
+from .data import Emoji, EmojiList
+from .exceptions import (
     EmojiNameExistsError,
     EmojiDatabaseError,
     EmojiFileExistsError,
@@ -17,9 +20,6 @@ from fukurou.cogs.emoji.exceptions import (
     EmojiInvalidNameError,
     EmojiNotFoundError
 )
-from fukurou.patterns import Singleton
-from . import database, storage
-from .data import Emoji, EmojiList
 
 ALLOWED_FILETYPES: Final = {
     'image/jpeg',
@@ -29,7 +29,7 @@ ALLOWED_FILETYPES: Final = {
     'image/bmp',
 }
 
-class EmojiManager(metaclass=Singleton):
+class EmojiManager(metaclass=SingletonMeta):
     """
     A class for managing Emoji for the guilds.
     This class is Singleton.
@@ -37,27 +37,28 @@ class EmojiManager(metaclass=Singleton):
     def __init__(self) -> None:
         self.database = self.__get_database_strategy()
         self.storage = self.__get_storage_strategy()
+        self.logger = logging.getLogger('fukurou.emoji')
 
     def __get_database_strategy(self) -> database.BaseEmojiDatabase | None:
-        database_type = configs.get_config('emoji').database_type
+        database_type = EmojiConfig().database.type
         match database_type:
             case 'sqlite':
                 return database.EmojiSqlite()
 
-        logger.error('There is no support for database %s.', database_type)
+        self.logger.error('There is no support for database %s.', database_type)
         return None
 
     def __get_storage_strategy(self) -> storage.BaseEmojiStorage | None:
-        storage_type = configs.get_config('emoji').storage_type
+        storage_type = EmojiConfig().storage.type
         match storage_type:
             case 'local':
                 return storage.LocalEmojiStorage()
 
-        logger.error('There is no support for storage %s.', storage_type)
+        self.logger.error('There is no support for storage %s.', storage_type)
         return None
 
     def __check_emoji_name(self, emoji_name: str) -> bool:
-        pattern = f'^{configs.get_config("emoji").expression_pattern}$'
+        pattern = f'^{EmojiConfig().expression.name_pattern}$'
         return re.match(pattern=pattern, string=emoji_name)
 
     def __verify_file_type(self, file_type: str) -> str | None:
@@ -75,7 +76,7 @@ class EmojiManager(metaclass=Singleton):
         """
         self.storage.register(guild_id=guild_id)
 
-        logger.info('Guild(%d) is now ready for Emoji.', guild_id)
+        self.logger.info('Guild(%d) is now ready for Emoji.', guild_id)
 
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         """
@@ -127,17 +128,12 @@ class EmojiManager(metaclass=Singleton):
         :raises EmojiFileSaveError: If failed to save file.
         :raises EmojiDatabaseError: If database operation failed.
         """
-        logger.info("""User(%d) uploading emoji: {
-                        Name: %s,
-                        File URL: %s,
-                        File Size: %d Bytes,
-                        File Type: %s
-                    }""",
-                    uploader,
-                    emoji_name,
-                    attachment.url,
-                    attachment.size,
-                    attachment.content_type)
+        self.logger.info('User(%d) is uploading emoji "%s"', uploader, emoji_name)
+        self.logger.debug('Detail: {Name: %s, File URL: %s, File Size: %d Bytes, File Type: %s}',
+                          emoji_name,
+                          attachment.url,
+                          attachment.size,
+                          attachment.content_type)
 
         # Check name validity
         if not self.__check_emoji_name(emoji_name=emoji_name):
@@ -209,7 +205,7 @@ class EmojiManager(metaclass=Singleton):
                 message_args=(e.args,)
             ) from e
 
-        logger.info('Emoji "%s" is saved at "%s"', emoji_name, file_name)
+        self.logger.info('Emoji "%s" is saved at "%s"', emoji_name, file_name)
 
     def delete(self, guild_id: int, emoji_name: str) -> None:
         """

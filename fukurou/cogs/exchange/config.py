@@ -1,24 +1,16 @@
-from fukurou.configs import BaseConfig, add_config
+from typing import Any
+
+from fukurou.configs import BaseConfig
 
 class ExchangeConfig(BaseConfig):
     @property
-    def name(self) -> str:
-        return 'exchange'
+    def file_name(self) -> str:
+        return 'exchange.json'
 
-    @property
-    def keys(self) -> list[str]:
-        return [
-            'token_koreaexim',
-        ]
+    def __init__(self):
+        self.token_koreaexim = None
 
-    @property
-    def default_values(self) -> dict[str, any]:
-        return {
-            'token_koreaexim': 'TOKEN HERE'
-        }
+        super().__init__(defcon_dir=__file__)
 
-    @property
-    def token_koreaexim(self) -> str:
-        return self.get_value('token_koreaexim')
-
-add_config(ExchangeConfig())
+    def map(self, json_obj: dict[Any]) -> None:
+        self.token_koreaexim = json_obj['token_koreaexim']

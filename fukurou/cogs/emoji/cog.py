@@ -1,9 +1,9 @@
 # pylint: disable=C0114,C0115,C0116
 from typing import Any
+import logging
 import discord
 from discord.ext import commands
 
-from fukurou.logging import logger
 from .emojimanager import EmojiManager
 from .emojipareser import EmojiParser
 from .exceptions import EmojiError
@@ -16,7 +16,6 @@ from .views import (
 # Decorator for checking permission
 def emoji_managable():
     def predicate(ctx: discord.ApplicationContext):
-        logger.debug('%s', ctx.channel.permissions_for(ctx.author).manage_emojis)
         return ctx.channel.permissions_for(ctx.author).manage_emojis
     return commands.check(predicate=predicate)
 
@@ -29,6 +28,7 @@ class EmojiCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.logger = logging.getLogger('fukurou.emoji')
 
     @emoji_commands.command(
         name='add',
@@ -62,7 +62,7 @@ class EmojiCog(commands.Cog):
                 attachment=file
             )
         except EmojiError as e:
-            logger.error(e.message_double_quoted())
+            self.logger.error(e.message_double_quoted())
             await ctx.respond(
                 embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e),
                 ephemeral=True
@@ -94,7 +94,7 @@ class EmojiCog(commands.Cog):
         try:
             EmojiManager().delete(guild_id=ctx.guild.id, emoji_name=name)
         except EmojiError as e:
-            logger.error(e.message_double_quoted())
+            self.logger.error(e.message_double_quoted())
             await ctx.respond(
                 embed=EmojiErrorEmbed(description=f'Failed to delete **{name}**', error=e),
                 ephemeral=True
@@ -183,7 +183,7 @@ class EmojiCog(commands.Cog):
                 attachment=file
             )
         except EmojiError as e:
-            logger.error(e.message_double_quoted())
+            self.logger.error(e.message_double_quoted())
             await ctx.respond(
                 embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e),
                 ephemeral=True
@@ -273,7 +273,7 @@ class EmojiCog(commands.Cog):
                 )
             )
         except discord.DiscordException as e:
-            logger.error('Cannot send emoji to the user(%d): %s', message.author.id, e.args)
+            self.logger.error('Cannot send emoji to the user(%d): %s', message.author.id, e.args)
         else:
             # Increase usecount when sending emoji succeed
             EmojiManager().increase_usecount(

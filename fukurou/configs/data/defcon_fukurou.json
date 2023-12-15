@@ -1,0 +1,51 @@
+{
+    "token": "INSERT_TOKEN_HERE",
+    "extensions": [
+        "fukurou.cogs.emoji",
+        "fukurou.cogs.exchange",
+        "fukurou.cogs.minigames"
+    ],
+    "logging": {
+        "version": 1,
+        "formatters": {
+            "fmt_console": {
+                "format": "[%(asctime)s | %(name)s %(levelname)s] %(message)s",
+                "datefmt": "%m-%d-%Y %H:%M:%S"
+            },
+            "fmt_file": {
+                "format": "[%(asctime)s | %(name)s %(levelname)s] %(message)s",
+                "datefmt": "%m-%d-%Y %H:%M:%S"
+            }
+        },
+        "filters": {
+
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "fmt_console",
+                "level": "INFO",
+                "stream": "ext://sys.stdout"
+            },
+            "file": {
+                "class": "logging.handlers.TimedRotatingFileHandler",
+                "formatter": "fmt_file",
+                "level": "INFO",
+                "filename": "logs/fukurou.log",
+                "when": "midnight",
+                "backupCount": 30
+            }
+        },
+        "loggers": {
+            "fukurou": {
+                "level": "INFO",
+                "propagate": false,
+                "handlers": [ "console", "file" ]
+            }
+        },
+        "root": {
+            "level": "INFO",
+            "handlers": [ "console", "file" ]
+        }
+    }
+}
