@@ -50,6 +50,8 @@ class BaseConfig(ABC, Singleton, metaclass=BaseConfigMeta):
         path = os.path.join(FUKUROU_CONFIG_DIR, self.file_name)
 
         def read():
+            os.makedirs(FUKUROU_CONFIG_DIR, exist_ok=True)
+
             with open(path, mode='r', encoding='utf8') as file:
                 content = file.read()
 
