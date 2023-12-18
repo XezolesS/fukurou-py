@@ -16,17 +16,21 @@ WILDCARDS = {
 class EmojiSqlite(BaseEmojiDatabase):
     def _connect(self):
         db_path = EmojiConfig().database.path
+        db_dir = os.path.dirname(db_path)
 
         try:
-            if not os.path.exists(db_path):
-                os.makedirs(name=db_path, exist_ok=True)
+            os.makedirs(name=db_dir, exist_ok=True)
+            open(db_path, mode='x')
+        except FileExistsError:
+            self.logger.info('Successfully found database file for Emoji.')
         except OSError as e:
             self.logger.error('Cannot create database file: %s', e.strerror)
-        else:
-            self.conn = sqlite3.connect(database=db_path)
-            self.conn.execute('PRAGMA FOREIGN_KEYS = ON')
+            return
 
-            self.logger.info('Connected to the Emoji database.')
+        self.conn = sqlite3.connect(database=db_path)
+        self.conn.execute('PRAGMA FOREIGN_KEYS = ON')
+
+        self.logger.info('Connected to the Emoji database.')
 
     def _init_tables(self):
         script_relpath = os.path.join('script',  'sqlite_table_init.sql')
