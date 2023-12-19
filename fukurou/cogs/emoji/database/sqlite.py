@@ -20,7 +20,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
         try:
             os.makedirs(name=db_dir, exist_ok=True)
-            open(db_path, mode='x')
+            open(db_path, mode='x', encoding='utf8')
         except FileExistsError:
             self.logger.info('Successfully found database file for Emoji.')
         except OSError as e:
@@ -178,6 +178,15 @@ class EmojiSqlite(BaseEmojiDatabase):
             data = result.fetchall()
 
         return EmojiList(owner_id=user_id, entries=data)
+
+    def count(self, guild_id: int) -> int:
+        query = 'SELECT COUNT(1) FROM emoji WHERE guild_id=?;'
+
+        with closing(self.conn.cursor()) as cursor:
+            result = cursor.execute(query, (guild_id,))
+            count = int(result.fetchone()[0])
+
+        return count
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         subquery_emoji_name = '?'

@@ -131,6 +131,19 @@ class BaseEmojiDatabase(ABC):
         raise NotImplementedError("BaseEmojiDatabase.list() is not implemented!")
 
     @abstractmethod
+    def count(self, guild_id: int) -> int:
+        """
+        Get the number of Emojis in the guild.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+
+        :return: Number of Emojis in the guild.
+        :rtype: int
+        """
+        raise NotImplementedError("BaseEmojiDatabase.count() is not implemented!")
+
+    @abstractmethod
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         """
         Increase an Emoji use count for the user in the guild.

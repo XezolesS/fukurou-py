@@ -88,6 +88,11 @@ class EmojiFileTypeError(EmojiError):
     def desc(self) -> str:
         return 'Invalid File Type'
 
+class EmojiCapacityExceededError(EmojiError):
+    @property
+    def desc(self) -> str:
+        return 'Capacity Exceeded'
+
 class EmojiInvalidNameError(EmojiError):
     @property
     def desc(self) -> str:

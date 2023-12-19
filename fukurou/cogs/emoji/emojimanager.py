@@ -17,6 +17,7 @@ from .exceptions import (
     EmojiFileSaveError,
     EmojiFileTooLargeError,
     EmojiFileTypeError,
+    EmojiCapacityExceededError,
     EmojiInvalidNameError,
     EmojiNotFoundError
 )
@@ -35,12 +36,13 @@ class EmojiManager(metaclass=SingletonMeta):
     This class is Singleton.
     """
     def __init__(self) -> None:
+        self.logger = logging.getLogger('fukurou.emoji')
+        self.config = EmojiConfig()
         self.database = self.__get_database_strategy()
         self.storage = self.__get_storage_strategy()
-        self.logger = logging.getLogger('fukurou.emoji')
 
     def __get_database_strategy(self) -> database.BaseEmojiDatabase | None:
-        database_type = EmojiConfig().database.type
+        database_type = self.config.database.type
         match database_type:
             case 'sqlite':
                 return database.EmojiSqlite()
@@ -49,7 +51,7 @@ class EmojiManager(metaclass=SingletonMeta):
         return None
 
     def __get_storage_strategy(self) -> storage.BaseEmojiStorage | None:
-        storage_type = EmojiConfig().storage.type
+        storage_type = self.config.storage.type
         match storage_type:
             case 'local':
                 return storage.LocalEmojiStorage()
@@ -58,7 +60,7 @@ class EmojiManager(metaclass=SingletonMeta):
         return None
 
     def __check_emoji_name(self, emoji_name: str) -> bool:
-        pattern = f'^{EmojiConfig().expression.name_pattern}$'
+        pattern = f'^{self.config.expression.name_pattern}$'
         return re.match(pattern=pattern, string=emoji_name)
 
     def __verify_file_type(self, file_type: str) -> str | None:
@@ -159,10 +161,19 @@ class EmojiManager(metaclass=SingletonMeta):
             )
 
         # Check the file size
-        if attachment.size > 8*1024*1024:
+        maxsize = self.config.constraints[guild_id].maxsize
+        if attachment.size > maxsize*1024:
             raise EmojiFileTooLargeError(
-                message='Image file(%.2f MB) is larger than the size limit(%d MB).',
-                message_args=(attachment.size/1024/1024, 8,)
+                message='Image file(%.2f KB) is larger than the size limit(%d KB).',
+                message_args=(attachment.size/1024, maxsize)
+            )
+
+        count = self.database.count(guild_id=guild_id)
+        capacity = self.config.constraints[guild_id].capacity
+        if capacity != -1 and count >= capacity:
+            raise EmojiCapacityExceededError(
+                message='The capacity limit exceeded.(%d)',
+                message_args=(capacity)
             )
 
         # Download file from url

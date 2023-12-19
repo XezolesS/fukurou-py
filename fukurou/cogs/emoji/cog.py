@@ -295,7 +295,7 @@ class EmojiCog(commands.Cog):
         if isinstance(error, discord.CheckFailure):
             description = "You don't have a permission."
         else:
-            description='Unknown error has occured.'
+            description = 'Unknown error has occured.'
 
         await ctx.response.send_message(
             embed=EmojiErrorEmbed(description=description),
