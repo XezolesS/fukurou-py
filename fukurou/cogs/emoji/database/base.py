@@ -29,6 +29,21 @@ class BaseEmojiDatabase(ABC):
         raise NotImplementedError("BaseEmojiDatabase._init_tables() is not implemented!")
 
     @abstractmethod
+    def exists(self, guild_id: int, emoji_name: str) -> bool:
+        """
+        Check if the Emoji is exists.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+
+        :return: True if it exists, False if there's no such.
+        :rtype: bool
+        """
+        raise NotImplementedError("BaseEmojiDatabase.exists() is not implemented!")
+
+    @abstractmethod
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         """
         Get Emoji object from `guild_id` and `emoji_name` within the database.

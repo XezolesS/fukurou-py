@@ -52,6 +52,20 @@ class EmojiSqlite(BaseEmojiDatabase):
         else:
             self.logger.info('Successfully initialized Emoji database.')
 
+    def exists(self, guild_id: int, emoji_name: str) -> bool:
+        param_emoji_name = 'emoji_name'
+        if EmojiConfig().expression.ignore_spaces is True:
+            param_emoji_name = "replace(emoji_name, ' ', '')"
+            emoji_name = emoji_name.replace(' ', '')
+
+        query = f'SELECT (1) FROM emoji WHERE guild_id=? AND {param_emoji_name}=?'
+
+        with closing(self.conn.cursor()) as cursor:
+            result = cursor.execute(query, (guild_id, emoji_name))
+            exists = result.fetchone() is not None
+
+        return exists
+
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         param_emoji_name = 'emoji_name'
         if EmojiConfig().expression.ignore_spaces is True:

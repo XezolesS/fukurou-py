@@ -1,8 +1,9 @@
+from __future__ import annotations
 import os
 import logging
 import re
+from typing import Any, Final, Callable
 import requests
-from typing import Final
 from discord import Attachment
 from fukurou.patterns import SingletonMeta
 
@@ -10,6 +11,7 @@ from . import database, storage
 from .config import EmojiConfig
 from .data import Emoji, EmojiList
 from .exceptions import (
+    EmojiError,
     EmojiNameExistsError,
     EmojiDatabaseError,
     EmojiFileExistsError,
@@ -58,16 +60,6 @@ class EmojiManager(metaclass=SingletonMeta):
 
         self.logger.error('There is no support for storage %s.', storage_type)
         return None
-
-    def __check_emoji_name(self, emoji_name: str) -> bool:
-        pattern = f'^{self.config.expression.name_pattern}$'
-        return re.match(pattern=pattern, string=emoji_name)
-
-    def __verify_file_type(self, file_type: str) -> str | None:
-        if file_type not in ALLOWED_FILETYPES:
-            return None
-
-        return file_type.removeprefix('image/')
 
     def register(self, guild_id: int) -> None:
         """
@@ -136,45 +128,22 @@ class EmojiManager(metaclass=SingletonMeta):
                           attachment.url,
                           attachment.size,
                           attachment.content_type)
-
-        # Check name validity
-        if not self.__check_emoji_name(emoji_name=emoji_name):
-            raise EmojiInvalidNameError(
-                message='Name %s is not matched with the pattern.',
-                message_args=(emoji_name,)
-            )
-
-        # Check for duplicate name
-        emoji = self.database.get(guild_id=guild_id, emoji_name=emoji_name)
-        if emoji is not None:
-            raise EmojiNameExistsError(
-                message='Emoji %s is already exist.',
-                message_args=(emoji_name,)
-            )
-
-        # Check if the file is image
-        ext = self.__verify_file_type(file_type=attachment.content_type)
-        if ext is None:
-            raise EmojiFileTypeError(
-                message='*.%s is invalid file type for Emoji.',
-                message_args=(ext,)
-            )
-
-        # Check the file size
-        maxsize = self.config.constraints[guild_id].maxsize
-        if attachment.size > maxsize*1024:
-            raise EmojiFileTooLargeError(
-                message='Image file(%.2f KB) is larger than the size limit(%d KB).',
-                message_args=(attachment.size/1024, maxsize)
-            )
-
-        count = self.database.count(guild_id=guild_id)
-        capacity = self.config.constraints[guild_id].capacity
-        if capacity != -1 and count >= capacity:
-            raise EmojiCapacityExceededError(
-                message='The capacity limit exceeded.(%d)',
-                message_args=(capacity)
-            )
+        # Data validation
+        try:
+            EmojiValidator(
+                database=self.database,
+                guild_id=guild_id,
+                emoji_name=emoji_name,
+                attachment=attachment
+            ) \
+            .addval_name_pattern(pattern=f'^{self.config.expression.name_pattern}$') \
+            .addval_emoji_new() \
+            .addval_file_type() \
+            .addval_file_size(maxsize=self.config.constraints[guild_id].maxsize) \
+            .addval_capacity_limit(capacity=self.config.constraints[guild_id].capacity) \
+            .validate()
+        except EmojiError as e:
+            raise e
 
         # Download file from url
         try:
@@ -190,7 +159,11 @@ class EmojiManager(metaclass=SingletonMeta):
 
         # Save image to the storage
         try:
-            file_name = self.storage.save(guild_id=guild_id, file=image, ext=ext)
+            file_name = self.storage.save(
+                guild_id=guild_id,
+                file=image,
+                ext=attachment.content_type.removeprefix('image/')
+            )
         except EmojiFileExistsError as e:
             raise EmojiFileExistsError(
                 message='Image %s is already exist in %s',
@@ -230,13 +203,19 @@ class EmojiManager(metaclass=SingletonMeta):
         :raises EmojiNotFoundError: If there's no such Emoji.
         :raises EmojiDatabaseError: If database operation failed.
         """
-        # Check if emoji exists
+        # Data validation
+        try:
+            EmojiValidator(
+                database=self.database,
+                guild_id=guild_id,
+                emoji_name=emoji_name
+            ) \
+            .addval_emoji_exists() \
+            .validate()
+        except EmojiError as e:
+            raise e
+
         emoji = self.database.get(guild_id=guild_id, emoji_name=emoji_name)
-        if emoji is None:
-            raise EmojiNotFoundError(
-                message='There is no emoji named %s',
-                message_args=(emoji_name,)
-            )
 
         # Delete emoji record from the database
         try:
@@ -264,20 +243,20 @@ class EmojiManager(metaclass=SingletonMeta):
         :raises EmojiNotFoundError: If there's no such Emoji.
         :raises EmojiInvalidNameError: If Emoji name is not matched with the pattern in config.
         """
-        # Check if emoji exists
-        emoji = self.database.get(guild_id=guild_id, emoji_name=old_name)
-        if emoji is None:
-            raise EmojiNotFoundError(
-                message='There is no emoji named %s',
-                message_args=(old_name,)
-            )
-
-        # Check name validity
-        if not self.__check_emoji_name(emoji_name=new_name):
-            raise EmojiInvalidNameError(
-                message='Name %s is not matched with the pattern.',
-                message_args=(new_name,)
-            )
+        # Data validation
+        try:
+            EmojiValidator(
+                database=self.database,
+                guild_id=guild_id
+            ) \
+            .set_emoji_name(emoji_name=old_name) \
+            .addval_emoji_exists() \
+            .set_emoji_name(emoji_name=new_name) \
+            .addval_name_pattern(pattern=f'^{self.config.expression.name_pattern}$') \
+            .addval_emoji_new() \
+            .validate()
+        except EmojiError as e:
+            raise e
 
         self.database.rename(guild_id=guild_id, old_name=old_name, new_name=new_name)
 
@@ -306,28 +285,20 @@ class EmojiManager(metaclass=SingletonMeta):
         :raises EmojiFileSaveError: If failed to save file.
         :raises EmojiDatabaseError: If database operation failed.
         """
-        # Check if emoji exists
-        old_emoji = self.database.get(guild_id=guild_id, emoji_name=emoji_name)
-        if old_emoji is None:
-            raise EmojiNotFoundError(
-                message='There is no emoji named %s',
-                message_args=(emoji_name,)
-            )
-
-        # Check if the file is image
-        ext = self.__verify_file_type(file_type=attachment.content_type)
-        if ext is None:
-            raise EmojiFileTypeError(
-                message='*.%s is invalid file type for Emoji.',
-                message_args=(ext,)
-            )
-
-        # Check the file size
-        if attachment.size > 8*1024*1024:
-            raise EmojiFileTooLargeError(
-                message='Image file(%.2f MB) is larger than the size limit(%d MB).',
-                message_args=(attachment.size/1024/1024, 8,)
-            )
+        # Data validation
+        try:
+            EmojiValidator(
+                database=self.database,
+                guild_id=guild_id,
+                emoji_name=emoji_name,
+                attachment=attachment
+            ) \
+            .addval_emoji_exists() \
+            .addval_file_type() \
+            .addval_file_size(maxsize=self.config.constraints[guild_id].maxsize) \
+            .validate()
+        except EmojiError as e:
+            raise e
 
         # Download file from url
         try:
@@ -343,7 +314,11 @@ class EmojiManager(metaclass=SingletonMeta):
 
         # Save image to the storage
         try:
-            file_name = self.storage.save(guild_id=guild_id, file=image, ext=ext)
+            file_name = self.storage.save(
+                guild_id=guild_id,
+                file=image,
+                ext=attachment.content_type.removeprefix('image/')
+            )
         except EmojiFileExistsError as e:
             raise EmojiFileExistsError(
                 message='Image %s is already exist in %s',
@@ -354,6 +329,8 @@ class EmojiManager(metaclass=SingletonMeta):
                 e.args,
                 message='Error occured while saving a file'
             ) from e
+
+        old_emoji = self.database.get(guild_id=guild_id, emoji_name=emoji_name)
 
         # Replace emoji file_name from the database
         try:
@@ -404,3 +381,324 @@ class EmojiManager(metaclass=SingletonMeta):
         :type emoji_name: str
         """
         self.database.increase_usecount(guild_id=guild_id, user_id=user_id, emoji_name=emoji_name)
+
+class EmojiValidator:
+    """
+    A class for building validation process and validating Emoji data. 
+    Each validator will raise error if specific conditions are not satisfied.
+    """
+    def __init__(self,
+                 database: database.BaseEmojiDatabase | None = None,
+                 guild_id: int | None = None,
+                 emoji_name: str | None = None,
+                 attachment: Attachment | None = None):
+        self.__validators = []
+        self.__database = database
+        self.__guild_id = guild_id
+        self.__emoji_name = emoji_name
+        self.__attachment = attachment
+
+    def __add_validator(self, func: Callable, kwargs: dict[Any] = {}):
+        self.__validators.append({'func': func, 'kwargs': kwargs})
+
+    def set_database(self, database: database.BaseEmojiDatabase) -> EmojiValidator:
+        """
+        Set the database to validator to use.
+
+        :param database: Emoji database object.
+        :type database: database.BaseEmojiDatabase
+        """
+        self.__database = database
+
+        return self
+
+    def set_guild_id(self, guild_id: int) -> EmojiValidator:
+        """
+        Set a guild Id to the validator.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        """
+        self.__guild_id = guild_id
+
+        return self
+
+    def set_emoji_name(self, emoji_name: str) -> EmojiValidator:
+        """
+        Set the name of the Emoji to validate.
+
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+        """
+        self.__emoji_name = emoji_name
+
+        return self
+
+    def set_attachment(self, attachment: Attachment) -> EmojiValidator:
+        """
+        Set the attachment to validate.
+
+        :param attachment: discord.Attachment object.
+        :type attachment: discord.Attachment
+        """
+        self.__attachment = attachment
+
+        return self
+
+    def addval_name_pattern(self, pattern: str) -> EmojiValidator:
+        """
+        Add a validator to check if Emoji name is matched with the pattern.
+
+        The validator must have this property before validation. 
+        - `emoji_name`: Name of the Emoji.
+        
+        :class:`EmojiInvalidNameError` will be raised if:
+        - `emoji_name` is None.
+        - `emoji_name` is not matched with the `pattern`.
+
+        :param pattern: Regex pattern to be matched with.
+        :type pattern: str
+
+        :return: self
+        :rtype: EmojiValidator
+        """
+        def validate_name_pattern(emoji_name: str, pattern: str):
+            conditions = [
+                emoji_name is None,
+                not re.match(pattern=pattern, string=emoji_name)
+            ]
+
+            if any(conditions):
+                raise EmojiInvalidNameError(
+                    message='Name %s is not matched with the pattern.',
+                    message_args=(emoji_name,)
+                )
+
+        self.__add_validator(
+            validate_name_pattern,
+            {
+                'emoji_name': self.__emoji_name,
+                'pattern': pattern
+            }
+        )
+
+        return self
+
+    def addval_emoji_new(self) -> EmojiValidator:
+        """
+        Add a validator to check if the Emoji is not in the database.
+
+        The validator must have this property before validation. 
+        - `database`: Emoji database to search for.
+        - `guild_id`: Id of the guild.
+        - `emoji_name`: Name of the Emoji.
+        
+        :class:`EmojiNameExistsError` will be raised if:
+        - `database`, `guild_id` or `emoji_name` is None.
+        - There's an Emoji record that matched with the 
+        `guild_id` and `emoji_name` in the `database`.
+
+        :return: self
+        :rtype: EmojiValidator
+        """
+        def validate_name_new(database: database.BaseEmojiDatabase,
+                              guild_id: int,
+                              emoji_name: str):
+            conditions = [
+                None in (database, guild_id, emoji_name),
+                database.exists(guild_id=guild_id, emoji_name=emoji_name)
+            ]
+
+            if any(conditions):
+                raise EmojiNameExistsError(
+                    message='Emoji %s is already exist.',
+                    message_args=(emoji_name,)
+                )
+
+        self.__add_validator(
+            validate_name_new,
+            {
+                'database': self.__database,
+                'guild_id': self.__guild_id,
+                'emoji_name': self.__emoji_name
+            }
+        )
+
+        return self
+
+    def addval_emoji_exists(self) -> EmojiValidator:
+        """
+        Add a validator to check if the Emoji exists.
+
+        The validator must have this property before validation. 
+        - `database`: Emoji database to search for.
+        - `guild_id`: Id of the guild.
+        - `emoji_name`: Name of the Emoji.
+        
+        :class:`EmojiNotFoundError` will be raised if:
+        - `database`, `guild_id` or `emoji_name` is None.
+        - There's no Emoji record that matched with the 
+        `guild_id` and `emoji_name` in the `database`.
+
+        :return: self
+        :rtype: EmojiValidator
+        """
+        def validate_emoji_exists(database: database.BaseEmojiDatabase,
+                                  guild_id: int,
+                                  emoji_name: str):
+            conditions = [
+                None in (database, guild_id, emoji_name),
+                not database.exists(guild_id=guild_id, emoji_name=emoji_name)
+            ]
+
+            if any(conditions):
+                raise EmojiNotFoundError(
+                    message='There is no emoji named %s',
+                    message_args=(emoji_name,)
+                )
+
+        self.__add_validator(
+            validate_emoji_exists,
+            {
+                'database': self.__database,
+                'guild_id': self.__guild_id,
+                'emoji_name': self.__emoji_name
+            }
+        )
+
+        return self
+
+    def addval_file_type(self) -> EmojiValidator:
+        """
+        Add a validator to check if the Emoji file is valid type.
+        Only the image file that supported by Discord are supported.
+
+        The validator must have this property before validation. 
+        - `attachment`: :class:`discord.Attachment` object to be uploaded as an Emoji.
+        
+        :class:`EmojiNotFoundError` will be raised if:
+        - `attachment` is None.
+        - The `attachment` is not valid file type.
+
+        :return: self
+        :rtype: EmojiValidator
+        """
+        def validate_file_type(attachment: Attachment):
+            conditions = [
+                attachment is None,
+                attachment.content_type not in ALLOWED_FILETYPES
+            ]
+
+            if any(conditions):
+                raise EmojiFileTypeError(
+                    message='*.%s is invalid file type for Emoji.',
+                    message_args=(attachment.content_type,)
+                )
+
+        self.__add_validator(
+            validate_file_type,
+            {
+                'attachment': self.__attachment
+            }
+        )
+
+        return self
+
+    def addval_file_size(self, maxsize: int) -> EmojiValidator:
+        """
+        Add a validator to check if the Emoji file is smaller the size limit.
+
+        The validator must have this property before validation. 
+        - `attachment`: :class:`discord.Attachment` object to be uploaded as an Emoji.
+        
+        :class:`EmojiFileTooLargeError` will be raised if:
+        - `attachment` is None.
+        - The size of an `attachment` is larger than the `maxsize`.
+
+        :param maxsize: Max size of the file in kilobyte(KB).
+        :type maxsize: int
+
+        :return: self
+        :rtype: EmojiValidator
+        """
+        def validate_file_size(attachment: Attachment, maxsize: int):
+            conditions = [
+                attachment is None,
+                attachment.size > maxsize*1024
+            ]
+
+            if any(conditions):
+                raise EmojiFileTooLargeError(
+                    message='Image file(%.2f KB) is larger than the size limit(%d KB).',
+                    message_args=(attachment.size/1024, maxsize)
+                )
+
+        self.__add_validator(
+            validate_file_size,
+            {
+                'attachment': self.__attachment,
+                'maxsize': maxsize
+            }
+        )
+
+        return self
+
+    def addval_capacity_limit(self, capacity: int) -> EmojiValidator:
+        """
+        Add a validator to check if a number of the Emoji is smaller the capacity limit.
+        If the `capacity` is -1, then the validation always be success.
+
+        The validator must have this property before validation. 
+        - `database`: Emoji database to search for.
+        - `guild_id`: Id of the guild.
+        
+        :class:`EmojiCapacityExceededError` will be raised if:
+        - `database` or `guild_id` is None.
+        - The number of the Emoji in the guild is larger than the `capacity`.
+
+        :param capacity: A capacity limit.
+        :type capacity: int
+
+        :return: self
+        :rtype: EmojiValidator
+        """
+        def validate_capacity_limit(database: database.BaseEmojiDatabase,
+                                    guild_id: int,
+                                    capacity: int):
+            if capacity == -1:
+                return
+
+            conditions = [
+                None in (database, guild_id),
+                database.count(guild_id=guild_id) >= capacity,
+            ]
+
+            if any(conditions):
+                raise EmojiCapacityExceededError(
+                    message='The capacity limit exceeded. (%d)',
+                    message_args=(capacity)
+                )
+
+        self.__add_validator(
+            validate_capacity_limit,
+            {
+                'database': self.__database,
+                'guild_id': self.__guild_id,
+                'capacity': capacity
+            }
+        )
+
+        return self
+
+    def validate(self):
+        """
+        Validate the data with assigned validators. 
+        If no validator is assigned, it does nothing. 
+        Validators will be called in the order of assignment.
+        """
+
+        for v in self.__validators:
+            try:
+                v['func'](**v['kwargs'])
+            except EmojiError as e:
+                raise e
