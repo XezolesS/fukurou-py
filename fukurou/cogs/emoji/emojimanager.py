@@ -7,7 +7,8 @@ import requests
 from discord import Attachment
 from fukurou.patterns import SingletonMeta
 
-from . import database, storage
+from .database import BaseEmojiDatabase, get_emoji_database
+from .storage import BaseEmojiStorage, get_emoji_storage
 from .config import EmojiConfig
 from .data import Emoji, EmojiList
 from .exceptions import (
@@ -40,26 +41,24 @@ class EmojiManager(metaclass=SingletonMeta):
     def __init__(self) -> None:
         self.logger = logging.getLogger('fukurou.emoji')
         self.config = EmojiConfig()
-        self.database = self.__get_database_strategy()
-        self.storage = self.__get_storage_strategy()
 
-    def __get_database_strategy(self) -> database.BaseEmojiDatabase | None:
-        database_type = self.config.database.type
-        match database_type:
-            case 'sqlite':
-                return database.EmojiSqlite()
+        self.database = None
+        try:
+            self.database = get_emoji_database(dbtype=self.config.database.type)
+        except ValueError as e:
+            self.logger.error(
+                'Failed to assign database for Emoji (%s %s)',
+                e.args[0], e.args[1]
+            )
 
-        self.logger.error('There is no support for database %s.', database_type)
-        return None
-
-    def __get_storage_strategy(self) -> storage.BaseEmojiStorage | None:
-        storage_type = self.config.storage.type
-        match storage_type:
-            case 'local':
-                return storage.LocalEmojiStorage()
-
-        self.logger.error('There is no support for storage %s.', storage_type)
-        return None
+        self.storage = None
+        try:
+            self.storage = get_emoji_storage(sttype=self.config.storage.type)
+        except ValueError as e:
+            self.logger.error(
+                'Failed to assign storage for Emoji (%s %s)',
+                e.args[0], e.args[1]
+            )
 
     def register(self, guild_id: int) -> None:
         """
@@ -388,7 +387,7 @@ class EmojiValidator:
     Each validator will raise error if specific conditions are not satisfied.
     """
     def __init__(self,
-                 database: database.BaseEmojiDatabase | None = None,
+                 database: BaseEmojiDatabase | None = None,
                  guild_id: int | None = None,
                  emoji_name: str | None = None,
                  attachment: Attachment | None = None):
@@ -401,12 +400,12 @@ class EmojiValidator:
     def __add_validator(self, func: Callable, kwargs: dict[Any] = {}):
         self.__validators.append({'func': func, 'kwargs': kwargs})
 
-    def set_database(self, database: database.BaseEmojiDatabase) -> EmojiValidator:
+    def set_database(self, database: BaseEmojiDatabase) -> EmojiValidator:
         """
         Set the database to validator to use.
 
         :param database: Emoji database object.
-        :type database: database.BaseEmojiDatabase
+        :type database: BaseEmojiDatabase
         """
         self.__database = database
 
@@ -501,7 +500,7 @@ class EmojiValidator:
         :return: self
         :rtype: EmojiValidator
         """
-        def validate_name_new(database: database.BaseEmojiDatabase,
+        def validate_name_new(database: BaseEmojiDatabase,
                               guild_id: int,
                               emoji_name: str):
             conditions = [
@@ -543,7 +542,7 @@ class EmojiValidator:
         :return: self
         :rtype: EmojiValidator
         """
-        def validate_emoji_exists(database: database.BaseEmojiDatabase,
+        def validate_emoji_exists(database: BaseEmojiDatabase,
                                   guild_id: int,
                                   emoji_name: str):
             conditions = [
@@ -662,7 +661,7 @@ class EmojiValidator:
         :return: self
         :rtype: EmojiValidator
         """
-        def validate_capacity_limit(database: database.BaseEmojiDatabase,
+        def validate_capacity_limit(database: BaseEmojiDatabase,
                                     guild_id: int,
                                     capacity: int):
             if capacity == -1:

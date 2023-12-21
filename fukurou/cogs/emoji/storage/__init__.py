@@ -1,2 +1,7 @@
 from .base import BaseEmojiStorage
-from .local import LocalEmojiStorage
+from .factory import get_emoji_storage
+
+__all__ = [
+    'BaseEmojiStorage',
+    'get_emoji_storage'
+]
