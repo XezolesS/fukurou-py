@@ -292,10 +292,13 @@ class EmojiCog(commands.Cog):
         EmojiManager().register(guild_id=guild.id)
 
     async def cog_command_error(self, ctx: discord.ApplicationContext, error: Any):
+        description = 'Unknown error has occured.'
+
         if isinstance(error, discord.CheckFailure):
             description = "You don't have a permission."
-        else:
-            description = 'Unknown error has occured.'
+        elif isinstance(error, discord.ApplicationCommandInvokeError):
+            if isinstance(error.original, EmojiError):
+                description = error.original.message
 
         await ctx.response.send_message(
             embed=EmojiErrorEmbed(description=description),

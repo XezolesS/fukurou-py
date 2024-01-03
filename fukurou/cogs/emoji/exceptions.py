@@ -21,6 +21,9 @@ class EmojiError(Exception):
         :return: Formatted message. 
         :rtype: str
         """
+        if self.message_args is None:
+            return self.message
+
         return self.message.replace('%s', '"%s"') % (self.message_args)
 
     def message_backticked(self) -> str:
@@ -30,6 +33,9 @@ class EmojiError(Exception):
         :return: Formatted message. 
         :rtype: str
         """
+        if self.message_args is None:
+            return self.message
+
         return self.message.replace('%s', '`%s`') % (self.message_args)
 
 class EmojiDatabaseError(EmojiError):
