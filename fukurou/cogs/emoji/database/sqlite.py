@@ -66,6 +66,16 @@ class EmojiSqlite(BaseEmojiDatabase):
 
         return exists
 
+    def file_exists(self, guild_id: int, file_name: str) -> bool:
+        query = 'SELECT emoji_name FROM emoji WHERE guild_id=? AND file_name=?'
+
+        with closing(self.conn.cursor()) as cursor:
+            result = cursor.execute(query, (guild_id, file_name))
+            data = result.fetchone()
+            emoji_name = None if data is None else data[0]
+
+        return emoji_name
+
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         param_emoji_name = 'emoji_name'
         if EmojiConfig().expression.ignore_spaces is True:
@@ -95,7 +105,7 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, emoji.to_entry())
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()
 
@@ -112,7 +122,7 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, (guild_id, emoji_name))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()
 
@@ -129,7 +139,7 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, (new_name, guild_id, old_name))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()
 
@@ -148,7 +158,7 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, (uploader_id, file_name, guild_id, emoji_name))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()
 
@@ -223,6 +233,6 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, (guild_id, user_id, emoji_name, 1))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()

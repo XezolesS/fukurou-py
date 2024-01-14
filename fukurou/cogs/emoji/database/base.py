@@ -31,7 +31,7 @@ class BaseEmojiDatabase(ABC):
     @abstractmethod
     def exists(self, guild_id: int, emoji_name: str) -> bool:
         """
-        Check if the Emoji is exists.
+        Check if the Emoji exists.
 
         :param guild_id: Id of the guild.
         :type guild_id: int
@@ -42,6 +42,21 @@ class BaseEmojiDatabase(ABC):
         :rtype: bool
         """
         raise NotImplementedError("BaseEmojiDatabase.exists() is not implemented!")
+
+    @abstractmethod
+    def file_exists(self, guild_id: int, file_name: str) -> str | None:
+        """
+        Check if the Emoji file exists.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param file_name: Name of the Emoji.
+        :type file_name: str
+
+        :return: Name of the Emoji that is corresponds with the file, None if there is no such.
+        :rtype: str | None
+        """
+        raise NotImplementedError("BaseEmojiDatabase.file_exists() is not implemented!")
 
     @abstractmethod
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:

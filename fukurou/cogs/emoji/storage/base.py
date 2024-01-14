@@ -59,7 +59,7 @@ class BaseEmojiStorage(ABC):
         raise NotImplementedError("BaseEmojiStorage.get() is not implemented!")
 
     @abstractmethod
-    def save(self, guild_id: int, file: bytes, ext: str, **kwargs) -> str:
+    def save(self, guild_id: int, file: bytes, file_name: str, **kwargs) -> None:
         """
         Save emoji image to the storage.
 
@@ -67,11 +67,8 @@ class BaseEmojiStorage(ABC):
         :type guild_id: int
         :param file: Image file, in bytes.
         :type file: bytes
-        :param ext: Extension of the file.
-        :type ext: str
-
-        :return: Name of the saved file.
-        :rtype: str
+        :param file_name: Name of the file.
+        :type file_name: str
         """
         raise NotImplementedError("BaseEmojiStorage.save() is not implemented!")
 
