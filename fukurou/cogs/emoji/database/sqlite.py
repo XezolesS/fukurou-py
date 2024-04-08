@@ -16,17 +16,21 @@ WILDCARDS = {
 class EmojiSqlite(BaseEmojiDatabase):
     def _connect(self):
         db_path = EmojiConfig().database.path
+        db_dir = os.path.dirname(db_path)
 
         try:
-            if not os.path.exists(db_path):
-                os.makedirs(name=db_path, exist_ok=True)
+            os.makedirs(name=db_dir, exist_ok=True)
+            open(db_path, mode='x', encoding='utf8')
+        except FileExistsError:
+            self.logger.info('Successfully found database file for Emoji.')
         except OSError as e:
             self.logger.error('Cannot create database file: %s', e.strerror)
-        else:
-            self.conn = sqlite3.connect(database=db_path)
-            self.conn.execute('PRAGMA FOREIGN_KEYS = ON')
+            return
 
-            self.logger.info('Connected to the Emoji database.')
+        self.conn = sqlite3.connect(database=db_path)
+        self.conn.execute('PRAGMA FOREIGN_KEYS = ON')
+
+        self.logger.info('Connected to the Emoji database.')
 
     def _init_tables(self):
         script_relpath = os.path.join('script',  'sqlite_table_init.sql')
@@ -47,6 +51,30 @@ class EmojiSqlite(BaseEmojiDatabase):
                               e.args)
         else:
             self.logger.info('Successfully initialized Emoji database.')
+
+    def exists(self, guild_id: int, emoji_name: str) -> bool:
+        param_emoji_name = 'emoji_name'
+        if EmojiConfig().expression.ignore_spaces is True:
+            param_emoji_name = "replace(emoji_name, ' ', '')"
+            emoji_name = emoji_name.replace(' ', '')
+
+        query = f'SELECT (1) FROM emoji WHERE guild_id=? AND {param_emoji_name}=?'
+
+        with closing(self.conn.cursor()) as cursor:
+            result = cursor.execute(query, (guild_id, emoji_name))
+            exists = result.fetchone() is not None
+
+        return exists
+
+    def file_exists(self, guild_id: int, file_name: str) -> bool:
+        query = 'SELECT emoji_name FROM emoji WHERE guild_id=? AND file_name=?'
+
+        with closing(self.conn.cursor()) as cursor:
+            result = cursor.execute(query, (guild_id, file_name))
+            data = result.fetchone()
+            emoji_name = None if data is None else data[0]
+
+        return emoji_name
 
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         param_emoji_name = 'emoji_name'
@@ -77,7 +105,7 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, emoji.to_entry())
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()
 
@@ -94,7 +122,7 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, (guild_id, emoji_name))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()
 
@@ -111,7 +139,7 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, (new_name, guild_id, old_name))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()
 
@@ -130,7 +158,7 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, (uploader_id, file_name, guild_id, emoji_name))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()
 
@@ -175,6 +203,15 @@ class EmojiSqlite(BaseEmojiDatabase):
 
         return EmojiList(owner_id=user_id, entries=data)
 
+    def count(self, guild_id: int) -> int:
+        query = 'SELECT COUNT(1) FROM emoji WHERE guild_id=?;'
+
+        with closing(self.conn.cursor()) as cursor:
+            result = cursor.execute(query, (guild_id,))
+            count = int(result.fetchone()[0])
+
+        return count
+
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         subquery_emoji_name = '?'
         if EmojiConfig().expression.ignore_spaces is True:
@@ -196,6 +233,6 @@ class EmojiSqlite(BaseEmojiDatabase):
                 cursor.execute(query, (guild_id, user_id, emoji_name, 1))
         except sqlite3.Error as e:
             self.conn.rollback()
-            raise EmojiDatabaseError() from e
+            raise EmojiDatabaseError(*e.args) from e
 
         self.conn.commit()

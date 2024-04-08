@@ -1,3 +1,4 @@
+#pylint: disable=C0114,C0115
 import os
 from typing import Any
 
@@ -10,6 +11,7 @@ class EmojiConfig(BaseConfig):
 
     def __init__(self):
         self.expression = None
+        self.constraints = None
         self.database = None
         self.storage = None
 
@@ -17,6 +19,7 @@ class EmojiConfig(BaseConfig):
 
     def map(self, json_obj: dict[Any]) -> None:
         self.expression = self.EmojiExpressionConfig(json_obj['expression'])
+        self.constraints = self.EmojiConstraintsConfig(json_obj['constraints'])
         self.database = self.EmojiDatabaseConfig(json_obj['database'])
         self.storage = self.EmojiStorageConfig(json_obj['storage'])
 
@@ -27,6 +30,25 @@ class EmojiConfig(BaseConfig):
             self.closing = json_obj['closing']
             self.ignore_spaces = json_obj['ignore_spaces']
             self.pattern = f'^{self.opening}{self.name_pattern}{self.closing}$'
+
+    class EmojiConstraintsConfig:
+        class EmojiConstraintConfig:
+            def __init__(self, json_obj: dict[Any]):
+                self.capacity = json_obj['capacity']
+                self.maxsize = json_obj['maxsize']
+
+        def __init__(self, json_obj: dict[Any]):
+            self.__default_value = self.EmojiConstraintConfig(json_obj)
+            self.__overrides: dict[int, self.EmojiConstraintConfig] = {}
+
+            for o in json_obj['overrides']:
+                self.__overrides[o['guild_id']] = self.EmojiConstraintConfig(o)
+
+        def __getitem__(self, key: int) -> EmojiConstraintConfig:
+            try:
+                return self.__overrides[key]
+            except KeyError:
+                return self.__default_value[key]
 
     class EmojiDatabaseConfig:
         def __init__(self, json_obj: dict[Any]):

@@ -5,6 +5,13 @@
         "closing": ";",
         "ignore_spaces": true
     },
+    "constraints": {
+        "capacity": 500,
+        "maxsize": 1024,
+        "overrides": [
+            
+        ]
+    },
     "database": {
         "type": "sqlite",
         "file": "emoji.db",
