@@ -2,7 +2,7 @@ import logging
 import discord
 from discord.ext.commands import Bot
 
-from .configs import SystemConfig
+from .config import BotConfig
 from .patterns import Singleton
 
 class FukurouMeta(type(Bot), type(Singleton)):
@@ -22,7 +22,7 @@ class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
         )
 
     def run(self):
-        config = SystemConfig()
+        config = BotConfig()
 
         loaded = 0
         failed = 0
