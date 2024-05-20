@@ -1,15 +1,18 @@
 import logging
+from typing import Type
 import discord
 from discord.ext.commands import Bot
 
 from .config import BotConfig
+from .configs import add_config, get_config, Config
 from .patterns import Singleton
 
 class FukurouMeta(type(Bot), type(Singleton)):
     pass
 
 class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
-    def __init__(self):
+    def __init__(self, config: BotConfig):
+        self.config = config
         self.logger = logging.getLogger('fukurou')
 
         intents = discord.Intents.default()
@@ -21,26 +24,31 @@ class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
             command_prefix = '!'
         )
 
-    def run(self):
-        config = BotConfig()
+    def add_config(self, config: Type[Config]) -> None:
+        """
+        Add config to the service.
 
-        loaded = 0
-        failed = 0
-        for ext in config.extensions:
+        :param config: The type of the config. It must be inherited from `BaseConfig`
+        :type config: Type[Config]
+        """
+        add_config(config=config)
+        self.logger.info("Config '%s' has been successfully loaded",
+            get_config(config=config).file_name
+        )
+
+    def run(self) -> None:
+        loaded, failed = 0, 0
+        for ext in self.config.extensions:
             try:
                 self.load_extension(ext)
-                self.logger.info('Extension %s has been successfully loaded.', ext)
+                self.logger.info("Extension '%s' has been successfully loaded.", ext)
                 loaded += 1
-            except discord.ExtensionNotFound as e:
-                self.logger.error(e.args[0])
-                failed += 1
-            except discord.ExtensionAlreadyLoaded as e:
-                self.logger.error(e.args[0])
-                failed += 1
-            except discord.NoEntryPointError as e:
-                self.logger.error(e.args[0])
-                failed += 1
-            except discord.ExtensionFailed as e:
+            except (
+                discord.ExtensionNotFound,
+                discord.ExtensionAlreadyLoaded,
+                discord.NoEntryPointError,
+                discord.ExtensionFailed
+            ) as e:
                 self.logger.error(e.args[0])
                 failed += 1
 
@@ -49,4 +57,4 @@ class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
             loaded, failed
         )
 
-        super().run(config.token)
+        super().run(self.config.token)

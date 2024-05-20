@@ -2,12 +2,16 @@ from abc import ABC, abstractmethod
 from os import PathLike
 import logging
 
+from fukurou.configs import get_config
+from fukurou.cogs.emoji.config import EmojiConfig
+
 class BaseEmojiStorage(ABC):
     """
     Abstract class for interacting with the Emoji storage.
     """
     def __init__(self) -> None:
         self.logger = logging.getLogger('fukurou.emoji.storage')
+        self.config: EmojiConfig = get_config(config=EmojiConfig)
         self._setup()
 
     @abstractmethod

@@ -9,8 +9,9 @@ from functools import wraps
 from inspect import signature
 import requests
 from discord import Attachment
-from fukurou.patterns import SingletonMeta
 
+from fukurou.configs import get_config
+from fukurou.patterns import SingletonMeta
 from .database import BaseEmojiDatabase, get_emoji_database
 from .storage import BaseEmojiStorage, get_emoji_storage
 from .config import EmojiConfig
@@ -192,7 +193,7 @@ class EmojiManager(metaclass=SingletonMeta):
     """
     def __init__(self) -> None:
         self.logger = logging.getLogger('fukurou.emoji')
-        self.config = EmojiConfig()
+        self.config: EmojiConfig = get_config(config=EmojiConfig)
 
         self.database = None
         try:

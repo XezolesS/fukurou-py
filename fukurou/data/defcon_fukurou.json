@@ -1,9 +1,7 @@
 {
     "token": "INSERT_TOKEN_HERE",
     "extensions": [
-        "fukurou.cogs.emoji",
-        "fukurou.cogs.exchange",
-        "fukurou.cogs.minigames"
+        
     ],
     "logging": {
         "version": 1,

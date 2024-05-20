@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 import logging
 
+from fukurou.configs import get_config
 from fukurou.cogs.emoji.data import Emoji, EmojiList
+from fukurou.cogs.emoji.config import EmojiConfig
 
 class BaseEmojiDatabase(ABC):
     """
@@ -9,6 +11,7 @@ class BaseEmojiDatabase(ABC):
     """
     def __init__(self) -> None:
         self.logger = logging.getLogger('fukurou.emoji.database')
+        self.config: EmojiConfig = get_config(config=EmojiConfig)
         self._connect()
         self._init_tables()
 

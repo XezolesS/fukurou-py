@@ -1,13 +1,12 @@
 import os
 from os import PathLike
 
-from fukurou.cogs.emoji.config import EmojiConfig
 from fukurou.cogs.emoji.exceptions import EmojiFileIOError
 from .base import BaseEmojiStorage
 
 class LocalEmojiStorage(BaseEmojiStorage):
     def _setup(self):
-        root_dir = EmojiConfig().storage.directory
+        root_dir = self.config.storage.directory
         abs_root_dir = os.path.abspath(root_dir)
 
         try:

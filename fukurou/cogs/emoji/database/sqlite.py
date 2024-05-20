@@ -2,7 +2,6 @@ import os
 from contextlib import closing
 import sqlite3
 
-from fukurou.cogs.emoji.config import EmojiConfig
 from fukurou.cogs.emoji.data import Emoji, EmojiList
 from fukurou.cogs.emoji.exceptions import EmojiDatabaseError
 from .base import BaseEmojiDatabase
@@ -15,7 +14,7 @@ WILDCARDS = {
 
 class EmojiSqlite(BaseEmojiDatabase):
     def _connect(self):
-        db_path = EmojiConfig().database.path
+        db_path = self.config.database.path
         db_dir = os.path.dirname(db_path)
 
         try:
@@ -54,7 +53,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def exists(self, guild_id: int, emoji_name: str) -> bool:
         param_emoji_name = 'emoji_name'
-        if EmojiConfig().expression.ignore_spaces is True:
+        if self.config.expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             emoji_name = emoji_name.replace(' ', '')
 
@@ -78,7 +77,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
         param_emoji_name = 'emoji_name'
-        if EmojiConfig().expression.ignore_spaces is True:
+        if self.config.expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             emoji_name = emoji_name.replace(' ', '')
 
@@ -111,7 +110,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def delete(self, guild_id: int, emoji_name: str) -> None:
         param_emoji_name = 'emoji_name'
-        if EmojiConfig().expression.ignore_spaces is True:
+        if self.config.expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             emoji_name = emoji_name.replace(' ', '')
 
@@ -128,7 +127,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def rename(self, guild_id: int, old_name: str, new_name: str) -> None:
         param_emoji_name = 'emoji_name'
-        if EmojiConfig().expression.ignore_spaces is True:
+        if self.config.expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             old_name = old_name.replace(' ', '')
 
@@ -145,7 +144,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def replace(self, guild_id: int, uploader_id: int, emoji_name: str, file_name: str) -> None:
         param_emoji_name = 'emoji_name'
-        if EmojiConfig().expression.ignore_spaces is True:
+        if self.config.expression.ignore_spaces is True:
             param_emoji_name = "replace(emoji_name, ' ', '')"
             emoji_name = emoji_name.replace(' ', '')
 
@@ -214,7 +213,7 @@ class EmojiSqlite(BaseEmojiDatabase):
 
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:
         subquery_emoji_name = '?'
-        if EmojiConfig().expression.ignore_spaces is True:
+        if self.config.expression.ignore_spaces is True:
             subquery_emoji_name = """(
                 SELECT emoji_name FROM emoji WHERE replace(emoji_name, ' ', '')=?
             )"""
