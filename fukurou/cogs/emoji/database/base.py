@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 import logging
 
+from fukurou.configs import get_config
 from fukurou.cogs.emoji.data import Emoji, EmojiList
+from fukurou.cogs.emoji.config import EmojiConfig
 
 class BaseEmojiDatabase(ABC):
     """
@@ -9,6 +11,7 @@ class BaseEmojiDatabase(ABC):
     """
     def __init__(self) -> None:
         self.logger = logging.getLogger('fukurou.emoji.database')
+        self.config: EmojiConfig = get_config(config=EmojiConfig)
         self._connect()
         self._init_tables()
 
@@ -27,6 +30,36 @@ class BaseEmojiDatabase(ABC):
         This method will be called in `__init__()`.
         """
         raise NotImplementedError("BaseEmojiDatabase._init_tables() is not implemented!")
+
+    @abstractmethod
+    def exists(self, guild_id: int, emoji_name: str) -> bool:
+        """
+        Check if the Emoji exists.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param emoji_name: Name of the Emoji.
+        :type emoji_name: str
+
+        :return: True if it exists, False if there's no such.
+        :rtype: bool
+        """
+        raise NotImplementedError("BaseEmojiDatabase.exists() is not implemented!")
+
+    @abstractmethod
+    def file_exists(self, guild_id: int, file_name: str) -> str | None:
+        """
+        Check if the Emoji file exists.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+        :param file_name: Name of the Emoji.
+        :type file_name: str
+
+        :return: Name of the Emoji that is corresponds with the file, None if there is no such.
+        :rtype: str | None
+        """
+        raise NotImplementedError("BaseEmojiDatabase.file_exists() is not implemented!")
 
     @abstractmethod
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
@@ -129,6 +162,19 @@ class BaseEmojiDatabase(ABC):
         :rtype: EmojiList
         """
         raise NotImplementedError("BaseEmojiDatabase.list() is not implemented!")
+
+    @abstractmethod
+    def count(self, guild_id: int) -> int:
+        """
+        Get the number of Emojis in the guild.
+
+        :param guild_id: Id of the guild.
+        :type guild_id: int
+
+        :return: Number of Emojis in the guild.
+        :rtype: int
+        """
+        raise NotImplementedError("BaseEmojiDatabase.count() is not implemented!")
 
     @abstractmethod
     def increase_usecount(self, guild_id: int, user_id: int, emoji_name: str) -> None:

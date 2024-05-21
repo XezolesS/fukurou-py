@@ -1,2 +1,7 @@
 from .base import BaseEmojiDatabase
-from .sqlite import EmojiSqlite
+from .factory import get_emoji_database
+
+__all__ = [
+    'BaseEmojiDatabase',
+    'get_emoji_database'
+]

@@ -6,7 +6,6 @@ from discord.ext import commands
 
 from .emojimanager import EmojiManager
 from .emojipareser import EmojiParser
-from .exceptions import EmojiError
 from .views import (
     EmojiEmbed,
     EmojiErrorEmbed,
@@ -52,30 +51,23 @@ class EmojiCog(commands.Cog):
                   name: str,
                   file: discord.Attachment):
         # This task can take longer than 3 seconds
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
-        try:
-            EmojiManager().add(
-                guild_id=ctx.guild.id,
-                uploader=ctx.author.id,
-                emoji_name=name,
-                attachment=file
+        await EmojiManager().add(
+            guild_id=ctx.guild.id,
+            uploader=ctx.author.id,
+            emoji_name=name,
+            attachment=file
+        )
+
+        await ctx.followup.send(
+            file=await file.to_file(),
+            embed=EmojiEmbed(
+                description=f'**{name}** is uploaded!',
+                image_url=f'attachment://{file.filename}',
+                author=ctx.author
             )
-        except EmojiError as e:
-            self.logger.error(e.message_double_quoted())
-            await ctx.respond(
-                embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e),
-                ephemeral=True
-            )
-        else:
-            await ctx.followup.send(
-                file=await file.to_file(),
-                embed=EmojiEmbed(
-                    description=f'**{name}** is uploaded!',
-                    image_url=f'attachment://{file.filename}',
-                    author=ctx.author
-                )
-            )
+        )
 
     @emoji_commands.command(
         name="delete",
@@ -91,18 +83,11 @@ class EmojiCog(commands.Cog):
     async def delete(self,
                      ctx: discord.ApplicationContext,
                      name: str):
-        try:
-            EmojiManager().delete(guild_id=ctx.guild.id, emoji_name=name)
-        except EmojiError as e:
-            self.logger.error(e.message_double_quoted())
-            await ctx.respond(
-                embed=EmojiErrorEmbed(description=f'Failed to delete **{name}**', error=e),
-                ephemeral=True
-            )
-        else:
-            await ctx.respond(
-                embed=EmojiEmbed(description=f'**{name}** has been deleted!')
-            )
+        EmojiManager().delete(guild_id=ctx.guild.id, emoji_name=name)
+
+        await ctx.respond(
+            embed=EmojiEmbed(description=f'**{name}** has been deleted!')
+        )
 
     @emoji_commands.command(
         name="rename",
@@ -125,31 +110,25 @@ class EmojiCog(commands.Cog):
                      ctx: discord.ApplicationContext,
                      old_name: str,
                      new_name: str):
-        try:
-            EmojiManager().rename(
-                guild_id=ctx.guild.id,
-                old_name=old_name,
-                new_name=new_name
-            )
-        except EmojiError as e:
-            await ctx.respond(
-                embed=EmojiErrorEmbed(description=e.message_backticked()),
-                ephemeral=True
-            )
-        else:
-            emoji = EmojiManager().get(guild_id=ctx.guild.id, emoji_name=new_name)
+        EmojiManager().rename(
+            guild_id=ctx.guild.id,
+            old_name=old_name,
+            new_name=new_name
+        )
 
-            await ctx.respond(
-                file=discord.File(
-                    fp=EmojiManager().get_file_loc(guild_id=ctx.guild.id, emoji=emoji),
-                    filename=emoji.file_name
-                ),
-                embed=EmojiEmbed(
-                    description=f'Emoji `{old_name}` is now `{new_name}`!',
-                    image_url=f'attachment://{emoji.file_name}',
-                    author=ctx.author
-                )
+        emoji = EmojiManager().get(guild_id=ctx.guild.id, emoji_name=new_name)
+
+        await ctx.respond(
+            file=discord.File(
+                fp=EmojiManager().get_file_loc(guild_id=ctx.guild.id, emoji=emoji),
+                filename=emoji.file_name
+            ),
+            embed=EmojiEmbed(
+                description=f'Emoji `{old_name}` is now `{new_name}`!',
+                image_url=f'attachment://{emoji.file_name}',
+                author=ctx.author
             )
+        )
 
     @emoji_commands.command(
         name="replace",
@@ -173,30 +152,23 @@ class EmojiCog(commands.Cog):
                       name: str,
                       file: discord.Attachment):
         # This task can take longer than 3 seconds
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
 
-        try:
-            EmojiManager().replace(
-                guild_id=ctx.guild.id,
-                uploader=ctx.author.id,
-                emoji_name=name,
-                attachment=file
+        await EmojiManager().replace(
+            guild_id=ctx.guild.id,
+            uploader=ctx.author.id,
+            emoji_name=name,
+            attachment=file
+        )
+
+        await ctx.followup.send(
+            file=await file.to_file(),
+            embed=EmojiEmbed(
+                description=f'**{name}** is replaced!',
+                image_url=f'attachment://{file.filename}',
+                author=ctx.author
             )
-        except EmojiError as e:
-            self.logger.error(e.message_double_quoted())
-            await ctx.respond(
-                embed=EmojiErrorEmbed(description=f'Failed to upload **{name}**', error=e),
-                ephemeral=True
-            )
-        else:
-            await ctx.followup.send(
-                file=await file.to_file(),
-                embed=EmojiEmbed(
-                    description=f'**{name}** is replaced!',
-                    image_url=f'attachment://{file.filename}',
-                    author=ctx.author
-                )
-            )
+        )
 
     @emoji_commands.command(
         name='list',
@@ -215,21 +187,19 @@ class EmojiCog(commands.Cog):
             keyword=keyword
         )
 
-        if not emoji_list:
-            if keyword is None:
-                message = 'There is no emoji on the server!'
-            else:
-                message = f"I can't find the emoji that contains `{keyword}` in its name!"
-
+        if emoji_list:
+            emoji_page = EmojiListPage(guild=ctx.guild, emoji_list=emoji_list, keyword=keyword)
+            await emoji_page.respond(ctx.interaction, ephemeral=True)
+        else:
             await ctx.response.send_message(
-                embed=EmojiErrorEmbed(description=message),
+                embed=discord.Embed(
+                    description=(
+                        'There is no emoji on the server!' if keyword is None
+                        else f"I can't find the emoji that contains `{keyword}` in its name!"
+                    )
+                ),
                 ephemeral=True
             )
-
-            return
-
-        emoji_page = EmojiListPage(guild=ctx.guild, emoji_list=emoji_list, keyword=keyword)
-        await emoji_page.respond(ctx.interaction, ephemeral=True)
 
     @commands.Cog.listener('on_message')
     async def on_emoji(self, message: discord.Message):
@@ -292,12 +262,13 @@ class EmojiCog(commands.Cog):
         EmojiManager().register(guild_id=guild.id)
 
     async def cog_command_error(self, ctx: discord.ApplicationContext, error: Any):
-        if isinstance(error, discord.CheckFailure):
-            description = "You don't have a permission."
-        else:
-            description='Unknown error has occured.'
-
-        await ctx.response.send_message(
-            embed=EmojiErrorEmbed(description=description),
-            ephemeral=True
-        )
+        try:
+            await ctx.response.send_message(
+                embed=EmojiErrorEmbed(error=error),
+                ephemeral=True
+            )
+        except discord.InteractionResponded:
+            await ctx.followup.send(
+                embed=EmojiErrorEmbed(error=error),
+                ephemeral=True
+            )

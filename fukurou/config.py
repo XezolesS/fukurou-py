@@ -1,8 +1,8 @@
 from typing import Any
 
-from .baseconfig import BaseConfig
+from .configs.baseconfig import BaseConfig
 
-class SystemConfig(BaseConfig):
+class BotConfig(BaseConfig):
     @property
     def file_name(self) -> str:
         return 'fukurou.json'

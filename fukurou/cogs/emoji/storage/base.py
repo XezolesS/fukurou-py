@@ -2,12 +2,16 @@ from abc import ABC, abstractmethod
 from os import PathLike
 import logging
 
+from fukurou.configs import get_config
+from fukurou.cogs.emoji.config import EmojiConfig
+
 class BaseEmojiStorage(ABC):
     """
     Abstract class for interacting with the Emoji storage.
     """
     def __init__(self) -> None:
         self.logger = logging.getLogger('fukurou.emoji.storage')
+        self.config: EmojiConfig = get_config(config=EmojiConfig)
         self._setup()
 
     @abstractmethod
@@ -59,7 +63,7 @@ class BaseEmojiStorage(ABC):
         raise NotImplementedError("BaseEmojiStorage.get() is not implemented!")
 
     @abstractmethod
-    def save(self, guild_id: int, file: bytes, ext: str, **kwargs) -> str:
+    def save(self, guild_id: int, file: bytes, file_name: str, **kwargs) -> None:
         """
         Save emoji image to the storage.
 
@@ -67,11 +71,8 @@ class BaseEmojiStorage(ABC):
         :type guild_id: int
         :param file: Image file, in bytes.
         :type file: bytes
-        :param ext: Extension of the file.
-        :type ext: str
-
-        :return: Name of the saved file.
-        :rtype: str
+        :param file_name: Name of the file.
+        :type file_name: str
         """
         raise NotImplementedError("BaseEmojiStorage.save() is not implemented!")
 

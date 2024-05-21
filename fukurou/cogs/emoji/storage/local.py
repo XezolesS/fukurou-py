@@ -1,19 +1,12 @@
 import os
 from os import PathLike
-import hashlib
 
-from fukurou.cogs.emoji.config import EmojiConfig
-from fukurou.cogs.emoji.exceptions import (
-    EmojiFileDeleteError,
-    EmojiFileExistsError,
-    EmojiFileNotFoundError,
-    EmojiFileSaveError
-)
+from fukurou.cogs.emoji.exceptions import EmojiFileIOError
 from .base import BaseEmojiStorage
 
 class LocalEmojiStorage(BaseEmojiStorage):
     def _setup(self):
-        root_dir = EmojiConfig().storage.directory
+        root_dir = self.config.storage.directory
         abs_root_dir = os.path.abspath(root_dir)
 
         try:
@@ -45,22 +38,16 @@ class LocalEmojiStorage(BaseEmojiStorage):
         guild_dir = self.get_guild_loc(guild_id=guild_id)
         return os.path.join(guild_dir, file_name)
 
-    def save(self, guild_id: int, file: bytes, ext: str, **kwargs) -> str:
-        # Build md5 checksum of a file
-        checksum = hashlib.md5(file).hexdigest()
-        file_name = f'{checksum}.{ext}'
-
-        # Check if file already exists
+    def save(self, guild_id: int, file: bytes, file_name: str, **kwargs) -> None:
         file_path = self.get(guild_id=guild_id, file_name=file_name)
-        if os.path.exists(file_path):
-            raise EmojiFileExistsError(file_name=file_name, directory=self.directory)
 
         # Save a file to the local storage
         try:
             with open(file_path, 'wb') as f:
                 f.write(file)
         except OSError as e:
-            raise EmojiFileSaveError() from e
+            self.logger.error('Error occured while saving file.', exc_info=1)
+            raise EmojiFileIOError('w', *e.args) from e
 
         return file_name
 
@@ -69,7 +56,8 @@ class LocalEmojiStorage(BaseEmojiStorage):
 
         try:
             os.remove(path=file_path)
-        except FileNotFoundError as e:
-            raise EmojiFileNotFoundError() from e
+        except FileNotFoundError:
+            self.logger.warning('Cannot find file to remove: %s', file_path)
         except OSError as e:
-            raise EmojiFileDeleteError() from e
+            self.logger.error('Error occured while removing file.', exc_info=1)
+            raise EmojiFileIOError('w', *e.args) from e

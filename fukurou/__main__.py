@@ -2,8 +2,9 @@ import sys
 import logging
 import logging.config
 
-from .configs import SystemConfig, NewConfigInterrupt
-from .fukuroubot import FukurouBot
+from .configs import add_config, get_config, NewConfigInterrupt
+from .config import BotConfig
+from .bot import FukurouBot
 
 CONFIG_CREATED_MESSAGE = """ERROR: Config not found.
 
@@ -13,12 +14,14 @@ Run the program again after modifying it."""
 if __name__ == '__main__':
     # Load system config
     try:
-        SystemConfig().load(interrupt_new=True)
+        add_config(config=BotConfig, interrupt_new=True)
     except NewConfigInterrupt:
         print(CONFIG_CREATED_MESSAGE)
         sys.exit()
 
-    # Load logging config
-    logging.config.dictConfig(SystemConfig().logging)
+    config: BotConfig = get_config(config=BotConfig)
 
-    FukurouBot().run()
+    # Load logging config
+    logging.config.dictConfig(config.logging)
+
+    FukurouBot(config=config).run()
