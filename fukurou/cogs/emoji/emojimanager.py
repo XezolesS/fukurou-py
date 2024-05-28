@@ -182,7 +182,7 @@ def check_capacity_limit():
             capacity = self.config.constraints[guild_id].capacity
 
             if capacity == -1:
-                return
+                return func(*args, **kwargs)
 
             if self.database.count(guild_id=guild_id) >= capacity:
                 raise EmojiCapacityExceededError(capacity)
