@@ -65,6 +65,10 @@ class EmojiErrorEmbed(Embed):
             self.__set_content(error=error)
 
     def __set_content(self, error: ApplicationCommandInvokeError):
+        # TODO:
+        # `desc` is not signed in certain circumstances.
+        # and may need cleaner code?
+        desc = error.original
         match error:
             case discord.CheckFailure():
                 desc = "Sorry, but you don't have permission to run this command!"

@@ -4,6 +4,7 @@ import io
 import logging
 import re
 import hashlib
+import asyncio
 from typing import Final
 from functools import wraps
 from inspect import signature
@@ -143,15 +144,19 @@ def check_file_size(argname: str):
 def check_file_isnew(argname: str):
     def decorator(func):
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             params = signature(func).bind(*args, **kwargs).arguments
             self: EmojiManager = params['self']
             guild_id = params['guild_id']
             attachment: Attachment = params[argname]
 
+            # Save attachment to buffer
             buffer = io.BytesIO()
+            save_coro = attachment.save(fp=buffer)
             try:
-                await attachment.save(fp=buffer)
+                # TODO: Verify if the loop is not none in this usecase.
+                loop = asyncio.get_running_loop()
+                asyncio.run_coroutine_threadsafe(save_coro, loop)
             except requests.exceptions.RequestException as e:
                 raise EmojiFileDownloadError(*e.args) from e
 
@@ -163,7 +168,7 @@ def check_file_isnew(argname: str):
             if emoji_name is not None:
                 raise EmojiFileExistsError(emoji_name)
 
-            return await func(*args, **kwargs)
+            return func(*args, **kwargs)
         return wrapper
     return decorator
 
