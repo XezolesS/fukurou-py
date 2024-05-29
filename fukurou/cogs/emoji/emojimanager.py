@@ -59,6 +59,12 @@ def connected(func):
     return wrapper
 
 def check_emoji_name(argname: str):
+    """
+    Check if an emoji name matches the pattern.
+
+    :param argname: Name of the parameter, representing `Name of the Emoji`.
+    :type argname: str
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -77,6 +83,12 @@ def check_emoji_name(argname: str):
     return decorator
 
 def check_emoji_isnew(argname: str):
+    """
+    Check if an emoji name is not recorded in the database.
+
+    :param argname: Name of the parameter, representing `Name of the Emoji`.
+    :type argname: str
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -93,6 +105,12 @@ def check_emoji_isnew(argname: str):
     return decorator
 
 def check_emoji_exists(argname: str):
+    """
+    Check if an emoji name already exists in the database.
+
+    :param argname: Name of the parameter, representing `Name of the Emoji`.
+    :type argname: str
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -109,6 +127,12 @@ def check_emoji_exists(argname: str):
     return decorator
 
 def check_file_type(argname: str):
+    """
+    Check for the type of an attachment file.
+
+    :param argname: Name of the parameter, representing `Attachment`.
+    :type argname: str
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -125,6 +149,12 @@ def check_file_type(argname: str):
     return decorator
 
 def check_file_size(argname: str):
+    """
+    Check for the size of an attachment file.
+
+    :param argname: Name of the parameter, representing `Attachment`.
+    :type argname: str
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -142,9 +172,21 @@ def check_file_size(argname: str):
     return decorator
 
 def check_file_isnew(argname: str):
+    """
+    Check if an attachment is already exists in the storage.
+    The method to be wrapped is must asynchronous.
+
+    This decorator adds additional keyword arguments:
+    - `file_byte`: The byte-data of the attachment file.
+    - `file_hash`: The md5 hash of the attachment file.
+    - `file_name`: The name of the file which is going to be stored to.
+
+    :param argname: Name of the parameter, representing `Attachment`.
+    :type argname: str
+    """
     def decorator(func):
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             params = signature(func).bind(*args, **kwargs).arguments
             self: EmojiManager = params['self']
             guild_id = params['guild_id']
@@ -152,14 +194,12 @@ def check_file_isnew(argname: str):
 
             # Save attachment to buffer
             buffer = io.BytesIO()
-            save_coro = attachment.save(fp=buffer)
             try:
-                # TODO: Verify if the loop is not none in this usecase.
-                loop = asyncio.get_running_loop()
-                asyncio.run_coroutine_threadsafe(save_coro, loop)
+                await attachment.save(fp=buffer)
             except requests.exceptions.RequestException as e:
                 raise EmojiFileDownloadError(*e.args) from e
 
+            # Add additional arguments to prevent reading attachment again
             kwargs['file_byte'] = buffer.read()
             kwargs['file_hash'] = hashlib.md5(kwargs['file_byte']).hexdigest()
             kwargs['file_name'] = f"{kwargs['file_hash']}.{kwargs['file_type']}"
@@ -168,11 +208,14 @@ def check_file_isnew(argname: str):
             if emoji_name is not None:
                 raise EmojiFileExistsError(emoji_name)
 
-            return func(*args, **kwargs)
+            return await func(*args, **kwargs)
         return wrapper
     return decorator
 
 def check_capacity_limit():
+    """
+    Check for the guild's emoji capacity limit.
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
