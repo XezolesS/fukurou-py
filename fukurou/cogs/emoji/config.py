@@ -26,48 +26,47 @@ class EmojiExpressionConfig(BaseSubConfig):
         )
 
 @dataclass
-class EmojiGuildConstraintConfig(BaseSubConfig):
-    guild_id: int = -1
-    capacity: int = 500
-    maxsize: int = 1024
+class EmojiConstraintConfig(BaseSubConfig):
+    capacity: int = -1
+    maxsize: int = 8192
 
     @classmethod
-    def from_dict(cls, json_obj: dict[Any]) -> EmojiGuildConstraintConfig:
-        return EmojiGuildConstraintConfig(
-            guild_id=json_obj['guild_id'],
+    def from_dict(cls, json_obj: dict[Any]) -> EmojiConstraintConfig:
+        return EmojiConstraintConfig(
             capacity=json_obj['capacity'],
             maxsize=json_obj['maxsize']
         )
 
 @dataclass
-class EmojiConstraintsConfig(BaseSubConfig):
+class EmojiGlobalConstraintConfig(BaseSubConfig):
     capacity: int = 500
     maxsize: int = 1024
-    overrides: list[EmojiGuildConstraintConfig] = field(
-        default_factory=lambda: [EmojiGuildConstraintConfig()]
+    overrides: dict[int, EmojiConstraintConfig] = field(
+        default_factory=lambda: {"GUILD_ID": EmojiConstraintConfig()}
     )
 
     def __post_init__(self):
-        self.default_constraint = EmojiGuildConstraintConfig(
-            guild_id=-1,
+        self.default_constraint = EmojiConstraintConfig(
             capacity=self.capacity,
             maxsize=self.maxsize
         )
+        print(self.default_constraint)
 
-    def __getitem__(self, key: int) -> EmojiGuildConstraintConfig:
+    def __getitem__(self, key: int) -> EmojiGlobalConstraintConfig:
         try:
             return self.overrides[key]
         except KeyError:
             return self.default_constraint
 
     @classmethod
-    def from_dict(cls, json_obj: dict[Any]) -> EmojiConstraintsConfig:
-        return EmojiConstraintsConfig(
+    def from_dict(cls, json_obj: dict[Any]) -> EmojiGlobalConstraintConfig:
+        return EmojiGlobalConstraintConfig(
             capacity=json_obj['capacity'],
             maxsize=json_obj['maxsize'],
-            overrides=[
-                EmojiGuildConstraintConfig.from_dict(ovrd_obj) for ovrd_obj in json_obj['overrides']
-            ]
+            overrides={
+                int(guild_id): EmojiConstraintConfig.from_dict(constraint)
+                for guild_id, constraint in json_obj['overrides'].items()
+            }
         )
 
 @dataclass
@@ -104,7 +103,7 @@ class EmojiStorageConfig(BaseSubConfig):
 class EmojiConfig(BaseConfig):
     #pylint: disable=no-self-argument
     expression: EmojiExpressionConfig = field(default_factory=EmojiExpressionConfig)
-    constraints: EmojiConstraintsConfig = field(default_factory=EmojiConstraintsConfig)
+    constraints: EmojiGlobalConstraintConfig = field(default_factory=EmojiGlobalConstraintConfig)
     database: EmojiDatabaseConfig = field(default_factory=EmojiDatabaseConfig)
     storage: EmojiStorageConfig = field(default_factory=EmojiStorageConfig)
 
@@ -116,7 +115,7 @@ class EmojiConfig(BaseConfig):
     def from_dict(cls, json_obj: dict[Any]) -> EmojiConfig:
         return EmojiConfig(
             expression=EmojiExpressionConfig.from_dict(json_obj['expression']),
-            constraints=EmojiConstraintsConfig.from_dict(json_obj['constraints']),
+            constraints=EmojiGlobalConstraintConfig.from_dict(json_obj['constraints']),
             database=EmojiDatabaseConfig.from_dict(json_obj['database']),
             storage=EmojiStorageConfig.from_dict(json_obj['storage'])
         )
