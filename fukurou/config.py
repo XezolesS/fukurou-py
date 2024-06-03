@@ -1,38 +1,69 @@
+from __future__ import annotations
 from typing import Any
+from dataclasses import dataclass, field
 
+from fukurou.patterns import classproperty
 from .configs.baseconfig import BaseConfig
 
+DEFAULT_LOGGING_CONFIG = {
+    "version": 1,
+    "formatters": {
+        "fmt_console": {
+            "format": "[%(asctime)s | %(name)s %(levelname)s] %(message)s",
+            "datefmt": "%m-%d-%Y %H:%M:%S"
+        },
+        "fmt_file": {
+            "format": "[%(asctime)s | %(name)s %(levelname)s] %(message)s",
+            "datefmt": "%m-%d-%Y %H:%M:%S"
+        }
+    },
+    "filters": {
+
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "fmt_console",
+            "level": "INFO",
+            "stream": "ext://sys.stdout"
+        },
+        "file": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "formatter": "fmt_file",
+            "level": "INFO",
+            "filename": "logs/fukurou.log",
+            "when": "midnight",
+            "backupCount": 30
+        }
+    },
+    "loggers": {
+        "fukurou": {
+            "level": "INFO",
+            "propagate": False,
+            "handlers": [ "console", "file" ]
+        }
+    },
+    "root": {
+        "level": "INFO",
+        "handlers": [ "console", "file" ]
+    }
+}
+
+@dataclass
 class BotConfig(BaseConfig):
-    @property
-    def file_name(self) -> str:
+    #pylint: disable=no-self-argument
+    token: str = 'INSERT_TOKEN'
+    extensions: list[str] = field(default_factory=list)
+    logging: dict = field(default_factory=lambda: DEFAULT_LOGGING_CONFIG)
+
+    @classproperty
+    def file_name(cls) -> str:
         return 'fukurou.json'
 
-    def __init__(self):
-        self.token: str = None
-        self.extensions: list[str] = None
-        self.logging: self.LoggingConfig = None
-
-        super().__init__(defcon_dir=__file__)
-
-    def map(self, json_obj: dict[Any]) -> None:
-        # Credentials
-        self.token = json_obj['token']
-
-        # Cogs to load
-        self.extensions = json_obj['extensions']
-
-        # Logging
-        self.logging = json_obj['logging']
-
-    class LoggingConfig:
-        def __init__(self, json_obj: dict[Any]):
-            self.directory = json_obj['directory']
-            self.max_log_files = json_obj['max_log_files']
-            self.format = self.LoggingFormatConfig(json_obj['format'])
-
-        class LoggingFormatConfig:
-            def __init__(self, json_obj: dict[Any]):
-                self.file_name = json_obj['file_name']
-                self.file_date = json_obj['file_date']
-                self.log_msg = json_obj['log_msg']
-                self.log_date = json_obj['log_date']
+    @classmethod
+    def from_dict(cls, json_obj: dict[Any]) -> BotConfig:
+        return BotConfig(
+            token=json_obj['token'],
+            extensions=json_obj['extensions'],
+            logging=json_obj['logging']
+        )

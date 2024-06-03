@@ -3,6 +3,7 @@ import logging
 import json
 import shutil
 from typing import Type, NewType
+from dataclasses import asdict
 
 from fukurou.patterns import SingletonMeta
 from .baseconfig import BaseConfig
@@ -46,33 +47,25 @@ class ConfigService(metaclass=SingletonMeta):
             self.logger.warning('%s is already added.', config.__name__)
             return
 
-        # Instantiate config class
-        conf_obj = config()
-
         # Load config
-        path = os.path.join(FUKUROU_CONFIG_DIR, conf_obj.file_name)
-
-        def read():
-            os.makedirs(FUKUROU_CONFIG_DIR, exist_ok=True)
-
-            with open(path, mode='r', encoding='utf8') as file:
-                content = file.read()
-
-            conf_obj.map(json.loads(content))
+        os.makedirs(FUKUROU_CONFIG_DIR, exist_ok=True)
+        path = os.path.join(FUKUROU_CONFIG_DIR, config.file_name)
 
         try:
-            read()
+            with open(path, mode='r', encoding='utf8') as file:
+                content = file.read()
         except FileNotFoundError as e:
-            src = os.path.join(conf_obj.defcon_path)
-            shutil.copy2(src, path)
+            # Write a default config if it's not exist.
+            content = json.dumps(asdict(config()), indent=2)
+
+            with open(path, mode='w', encoding='utf8') as file:
+                file.write(content)
 
             if interrupt_new is True:
                 raise NewConfigInterrupt from e
 
-            read()
-
         # Register to a config map
-        self.configs[config] = conf_obj
+        self.configs[config] = config.from_dict(json.loads(content))
 
     def get(self, config: Type[Config]) -> Config | None:
         """

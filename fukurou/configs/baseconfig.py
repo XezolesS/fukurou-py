@@ -1,31 +1,52 @@
+from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 from typing import Any
+from dataclasses import dataclass
 
+from fukurou.patterns import classproperty
+
+FUKUROU_CONFIG_DIR = 'configs/'
+
+@dataclass
 class BaseConfig(ABC):
     """
-    Abstract class for the config. 
-    Property `file_name` and method `map()` must be implemented.
+    Abstract class for the Config.
 
-    The name of the default config must be a form of `defcon_{file_name}`.
-    Default config must be located under `data/` in the same directory of the source code.
+    A Config must be a top-level object in the JSON file.
+
+    To implement a Config, you should:
+    - Decorate a class with `dataclasses.dataclass`
+    - Specify a value of `file_name` property.
+    - Implement `from_dict` method to structurize and validate JSON data. 
+    - Add fields and their default values.
 
     :cvar file_name: Name of the config file.
     """
-    @property
-    @abstractmethod
-    def file_name(self) -> str:
+    #pylint: disable=no-self-argument
+    @classproperty
+    def file_name(cls) -> str:
         """
         Name of the config file.
         """
         raise NotImplementedError
 
-    def __init__(self, defcon_dir: str = __file__):
-        self.defcon_path = os.path.join(
-            os.path.dirname(defcon_dir),
-            os.path.join('data', 'defcon_' + self.file_name)
-        )
+    @classmethod
+    def from_dict(cls, json_obj: dict[Any]) -> BaseConfig:
+        raise NotImplementedError
 
-    @abstractmethod
-    def map(self, json_obj: dict[Any]) -> None:
+@dataclass
+class BaseSubConfig(ABC):
+    """
+    Abstract class for a SubConfig.
+
+    A SubConfig represents a non-top-level object in a JSON file.
+
+    To implement a SubConfig, you should:
+    - Decorate a class with `dataclasses.dataclass`
+    - Implement `from_dict` method to structurize and validate JSON data. 
+    - Add fields and their default values.
+    """
+    @classmethod
+    def from_dict(cls, json_obj: dict[Any]) -> BaseSubConfig:
         raise NotImplementedError

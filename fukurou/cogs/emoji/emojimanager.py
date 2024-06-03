@@ -220,8 +220,14 @@ class EmojiManager(metaclass=SingletonMeta):
         :param guild_id: Id of the guild.
         :type guild_id: int
         """
-        self.storage.register(guild_id=guild_id)
+        if not isinstance(self.storage, BaseEmojiStorage):
+            self.logger.error(
+                'Cannot register an Emoji storage for the guild(%d): Invalid Storage Type',
+                guild_id
+            )
+            return
 
+        self.storage.register(guild_id=guild_id)
         self.logger.info('Guild(%d) is now ready for Emoji.', guild_id)
 
     def get(self, guild_id: int, emoji_name: str) -> Emoji | None:
