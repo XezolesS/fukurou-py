@@ -5,8 +5,6 @@ from dataclasses import dataclass
 
 from fukurou.patterns import classproperty
 
-FUKUROU_CONFIG_DIR = 'configs/'
-
 @dataclass
 class BaseConfig(ABC):
     """

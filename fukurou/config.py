@@ -3,7 +3,7 @@ from typing import Any
 from dataclasses import dataclass, field
 
 from fukurou.patterns import classproperty
-from .configs.baseconfig import BaseConfig
+from .configs.interfaces import BaseConfig
 
 DEFAULT_LOGGING_CONFIG = {
     "version": 1,

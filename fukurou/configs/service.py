@@ -5,7 +5,7 @@ from typing import Type, NewType
 from dataclasses import asdict
 
 from fukurou.patterns import SingletonMeta
-from .baseconfig import BaseConfig
+from .interfaces import BaseConfig
 from .exceptions import NewConfigInterrupt
 
 FUKUROU_CONFIG_DIR = 'configs/'
@@ -14,8 +14,8 @@ Config = NewType('Config', BaseConfig)
 
 class ConfigService(metaclass=SingletonMeta):
     def __init__(self):
-        self.configs: dict[Type[Config], Config] = {}
         self.logger = logging.getLogger('fukurou.configs')
+        self.configs: dict[Type[Config], Config] = {}
 
     def add(self, config: Type[Config], interrupt_new: bool = False) -> None:
         """
