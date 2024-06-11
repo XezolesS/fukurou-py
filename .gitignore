@@ -134,17 +134,9 @@ dmypy.json
 # API Key files
 *_token.json
 
-# Fukurou config files
-/configs/
-
-# Fukurou log files
-/logs/
-
-# Fukurou image files
-/images/
-
-# Fukurou database files
-/databases/
+# Folders but source.
+/*/
+!/fukurou/*
 
 # Cogs
 # !<cog path> to exclude ignoring.
