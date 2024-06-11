@@ -136,7 +136,7 @@ dmypy.json
 
 # Folders but source.
 /*/
-!/fukurou/*
+!/fukurou
 
 # Cogs
 # !<cog path> to exclude ignoring.

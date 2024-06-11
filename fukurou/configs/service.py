@@ -48,7 +48,7 @@ class ConfigService(metaclass=SingletonMeta):
 
         # Load config
         os.makedirs(FUKUROU_CONFIG_DIR, exist_ok=True)
-        path = os.path.join(FUKUROU_CONFIG_DIR, config.file_name)
+        path = os.path.join(FUKUROU_CONFIG_DIR, config.get_file_name())
 
         try:
             with open(path, mode='r', encoding='utf8') as file:
@@ -80,14 +80,16 @@ class ConfigService(metaclass=SingletonMeta):
         except KeyError:
             return None
 
+SERVICE: ConfigService = ConfigService()
+
 def add_config(config: Type[Config], interrupt_new: bool = False) -> None:
     """
     Alias of `ConfigService().add()`
     """
-    return ConfigService().add(config=config, interrupt_new=interrupt_new)
+    return SERVICE.add(config=config, interrupt_new=interrupt_new)
 
 def get_config(config: Type[Config]) -> Config | None:
     """
     Alias of `ConfigService().get()`
     """
-    return ConfigService().get(config=config)
+    return SERVICE.get(config=config)

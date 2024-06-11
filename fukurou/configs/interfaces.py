@@ -1,9 +1,7 @@
 from __future__ import annotations
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any
 from dataclasses import dataclass
-
-from fukurou.patterns import classproperty
 
 @dataclass
 class BaseConfig(ABC):
@@ -14,21 +12,17 @@ class BaseConfig(ABC):
 
     To implement a Config, you should:
     - Decorate a class with `dataclasses.dataclass`
-    - Specify a value of `file_name` property.
+    - Specify a return value of `get_file_name` method.
     - Implement `from_dict` method to structurize and validate JSON data. 
     - Add fields and their default values.
-
-    :cvar file_name: Name of the config file.
     """
-    #pylint: disable=no-self-argument
-    @classproperty
-    def file_name(cls) -> str:
-        """
-        Name of the config file.
-        """
+    @classmethod
+    @abstractmethod
+    def get_file_name(cls) -> str:
         raise NotImplementedError
 
     @classmethod
+    @abstractmethod
     def from_dict(cls, json_obj: dict[Any]) -> BaseConfig:
         raise NotImplementedError
 
@@ -45,5 +39,6 @@ class BaseSubConfig(ABC):
     - Add fields and their default values.
     """
     @classmethod
+    @abstractmethod
     def from_dict(cls, json_obj: dict[Any]) -> BaseSubConfig:
         raise NotImplementedError

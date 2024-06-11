@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import Any
 from dataclasses import dataclass, field
 
-from fukurou.patterns import classproperty
 from .configs.interfaces import BaseConfig
 
 DEFAULT_LOGGING_CONFIG = {
@@ -56,8 +55,8 @@ class BotConfig(BaseConfig):
     extensions: list[str] = field(default_factory=list)
     logging: dict = field(default_factory=lambda: DEFAULT_LOGGING_CONFIG)
 
-    @classproperty
-    def file_name(cls) -> str:
+    @classmethod
+    def get_file_name(cls) -> str:
         return 'fukurou.json'
 
     @classmethod

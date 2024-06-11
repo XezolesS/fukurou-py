@@ -33,7 +33,7 @@ class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
         """
         add_config(config=config)
         self.logger.info("Config '%s' has been successfully loaded",
-            get_config(config=config).file_name
+            get_config(config=config).get_file_name()
         )
 
     def run(self) -> None:

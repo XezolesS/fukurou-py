@@ -4,7 +4,6 @@ from typing import Any
 from dataclasses import dataclass, field
 
 from fukurou.configs import BaseConfig, BaseSubConfig
-from fukurou.patterns import classproperty
 
 @dataclass
 class EmojiExpressionConfig(BaseSubConfig):
@@ -50,7 +49,6 @@ class EmojiGlobalConstraintConfig(BaseSubConfig):
             capacity=self.capacity,
             maxsize=self.maxsize
         )
-        print(self.default_constraint)
 
     def __getitem__(self, key: int) -> EmojiGlobalConstraintConfig:
         try:
@@ -60,13 +58,17 @@ class EmojiGlobalConstraintConfig(BaseSubConfig):
 
     @classmethod
     def from_dict(cls, json_obj: dict[Any]) -> EmojiGlobalConstraintConfig:
+        constraints = {}
+        for guild_id, constraint in json_obj['overrides'].items():
+            try:
+                constraints[int(guild_id)] = constraint
+            except ValueError:
+                pass    # Ignore ValueError
+
         return EmojiGlobalConstraintConfig(
             capacity=json_obj['capacity'],
             maxsize=json_obj['maxsize'],
-            overrides={
-                int(guild_id): EmojiConstraintConfig.from_dict(constraint)
-                for guild_id, constraint in json_obj['overrides'].items()
-            }
+            overrides=constraints
         )
 
 @dataclass
@@ -101,14 +103,13 @@ class EmojiStorageConfig(BaseSubConfig):
 
 @dataclass
 class EmojiConfig(BaseConfig):
-    #pylint: disable=no-self-argument
     expression: EmojiExpressionConfig = field(default_factory=EmojiExpressionConfig)
     constraints: EmojiGlobalConstraintConfig = field(default_factory=EmojiGlobalConstraintConfig)
     database: EmojiDatabaseConfig = field(default_factory=EmojiDatabaseConfig)
     storage: EmojiStorageConfig = field(default_factory=EmojiStorageConfig)
 
-    @classproperty
-    def file_name(cls) -> str:
+    @classmethod
+    def get_file_name(cls) -> str:
         return 'emoji.json'
 
     @classmethod
