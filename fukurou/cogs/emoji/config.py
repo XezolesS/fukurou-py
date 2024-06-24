@@ -100,7 +100,6 @@ class EmojiStorageConfig(BaseSubConfig):
             directory=json_obj['directory']
         )
 
-
 @dataclass
 class EmojiConfig(BaseConfig):
     expression: EmojiExpressionConfig = field(default_factory=EmojiExpressionConfig)
