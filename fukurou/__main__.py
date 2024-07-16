@@ -24,4 +24,5 @@ if __name__ == '__main__':
     # Load logging config
     logging.config.dictConfig(config.logging)
 
-    FukurouBot(config=config).run()
+    bot = FukurouBot(config=config)
+    bot.run()

@@ -5,12 +5,8 @@ from discord.ext.commands import Bot
 
 from .config import BotConfig
 from .configs import add_config, get_config, Config
-from .patterns import Singleton
 
-class FukurouMeta(type(Bot), type(Singleton)):
-    pass
-
-class FukurouBot(Bot, Singleton, metaclass=FukurouMeta):
+class FukurouBot(Bot):
     def __init__(self, config: BotConfig):
         self.config = config
         self.logger = logging.getLogger('fukurou')
