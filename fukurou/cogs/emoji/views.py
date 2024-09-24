@@ -12,8 +12,8 @@ from discord import (
 from discord.colour import Colour
 from discord.ext.pages import Paginator, PaginatorButton
 
-from .data import Emoji, EmojiList
-from .exceptions import (
+from fukurou.cogs.emoji.data import Emoji, EmojiList
+from fukurou.cogs.emoji.exceptions import (
     EmojiError,
     EmojiCapacityExceededError,
     EmojiDatabaseError,

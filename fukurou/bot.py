@@ -1,14 +1,19 @@
 import logging
+import logging.config
 from typing import Type
 import discord
 from discord.ext.commands import Bot
 
-from .config import BotConfig
-from .configs import add_config, get_config, Config
+from fukurou.bot_config import BotConfig
+from fukurou.configs import Configurable
 
-class FukurouBot(Bot):
-    def __init__(self, config: BotConfig):
-        self.config = config
+class FukurouBot(Bot, Configurable):
+    def __init__(self):
+        self.init_config(BotConfig, interrupt_new=True)
+
+        self.config: BotConfig = self.get_config(BotConfig)
+        logging.config.dictConfig(self.config.logging)
+
         self.logger = logging.getLogger('fukurou')
 
         intents = discord.Intents.default()
@@ -18,18 +23,6 @@ class FukurouBot(Bot):
         super().__init__(
             intents = intents,
             command_prefix = '!'
-        )
-
-    def add_config(self, config: Type[Config]) -> None:
-        """
-        Add config to the service.
-
-        :param config: The type of the config. It must be inherited from `BaseConfig`
-        :type config: Type[Config]
-        """
-        add_config(config=config)
-        self.logger.info("Config '%s' has been successfully loaded",
-            get_config(config=config).get_file_name()
         )
 
     def run(self) -> None:

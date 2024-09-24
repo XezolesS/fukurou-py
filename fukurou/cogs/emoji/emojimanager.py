@@ -11,13 +11,11 @@ from inspect import signature
 import requests
 from discord import Attachment
 
-from fukurou.configs import get_config
-from fukurou.patterns import SingletonMeta
-from .database import BaseEmojiDatabase, get_emoji_database
-from .storage import BaseEmojiStorage, get_emoji_storage
-from .config import EmojiConfig
-from .data import Emoji, EmojiList
-from .exceptions import (
+from fukurou.cogs.emoji.database import BaseEmojiDatabase, get_emoji_database
+from fukurou.cogs.emoji.storage import BaseEmojiStorage, get_emoji_storage
+from fukurou.cogs.emoji.config import EmojiConfig
+from fukurou.cogs.emoji.data import Emoji, EmojiList
+from fukurou.cogs.emoji.exceptions import (
     EmojiCapacityExceededError,
     EmojiDatabaseError,
     EmojiExistsError,
@@ -234,32 +232,16 @@ def check_capacity_limit():
         return wrapper
     return decorator
 
-class EmojiManager(metaclass=SingletonMeta):
+class EmojiManager:
     """
     A class for managing Emoji for the guilds.
     This class is Singleton.
     """
-    def __init__(self) -> None:
+    def __init__(self, config: EmojiConfig) -> None:
         self.logger = logging.getLogger('fukurou.emoji')
-        self.config: EmojiConfig = get_config(config=EmojiConfig)
-
-        self.database = None
-        try:
-            self.database = get_emoji_database(dbtype=self.config.database.type)
-        except ValueError as e:
-            self.logger.error(
-                'Failed to assign database for Emoji (%s %s)',
-                e.args[0], e.args[1]
-            )
-
-        self.storage = None
-        try:
-            self.storage = get_emoji_storage(sttype=self.config.storage.type)
-        except ValueError as e:
-            self.logger.error(
-                'Failed to assign storage for Emoji (%s %s)',
-                e.args[0], e.args[1]
-            )
+        self.config: EmojiConfig = config
+        self.database = get_emoji_database(config)
+        self.storage = get_emoji_storage(config)
 
     def register(self, guild_id: int) -> None:
         """

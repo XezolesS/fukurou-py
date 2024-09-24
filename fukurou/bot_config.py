@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any
 from dataclasses import dataclass, field
 
-from .configs.interfaces import BaseConfig
+from fukurou.configs import Config
 
 DEFAULT_LOGGING_CONFIG = {
     "version": 1,
@@ -49,7 +49,7 @@ DEFAULT_LOGGING_CONFIG = {
 }
 
 @dataclass
-class BotConfig(BaseConfig):
+class BotConfig(Config):
     #pylint: disable=no-self-argument
     token: str = 'INSERT_TOKEN'
     extensions: list[str] = field(default_factory=list)

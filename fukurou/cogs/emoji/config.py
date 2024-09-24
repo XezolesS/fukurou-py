@@ -3,10 +3,10 @@ import os
 from typing import Any
 from dataclasses import dataclass, field
 
-from fukurou.configs import BaseConfig, BaseSubConfig
+from fukurou.configs import Config
 
 @dataclass
-class EmojiExpressionConfig(BaseSubConfig):
+class EmojiExpressionConfig(Config):
     name_pattern: str = '[a-zA-Z0-9_ -]+'
     opening: str = ';'
     closing: str = ';'
@@ -25,7 +25,7 @@ class EmojiExpressionConfig(BaseSubConfig):
         )
 
 @dataclass
-class EmojiConstraintConfig(BaseSubConfig):
+class EmojiConstraintConfig(Config):
     capacity: int = -1
     maxsize: int = 8192
 
@@ -37,7 +37,7 @@ class EmojiConstraintConfig(BaseSubConfig):
         )
 
 @dataclass
-class EmojiGlobalConstraintConfig(BaseSubConfig):
+class EmojiGlobalConstraintConfig(Config):
     capacity: int = 500
     maxsize: int = 1024
     overrides: dict[int, EmojiConstraintConfig] = field(
@@ -72,7 +72,7 @@ class EmojiGlobalConstraintConfig(BaseSubConfig):
         )
 
 @dataclass
-class EmojiDatabaseConfig(BaseSubConfig):
+class EmojiDatabaseConfig(Config):
     type: str = 'sqlite'
     file: str = 'emoji.db'
     directory: str = './databases'
@@ -89,7 +89,7 @@ class EmojiDatabaseConfig(BaseSubConfig):
         )
 
 @dataclass
-class EmojiStorageConfig(BaseSubConfig):
+class EmojiStorageConfig(Config):
     type: str = 'local'
     directory: str = './images'
 
@@ -101,7 +101,7 @@ class EmojiStorageConfig(BaseSubConfig):
         )
 
 @dataclass
-class EmojiConfig(BaseConfig):
+class EmojiConfig(Config):
     expression: EmojiExpressionConfig = field(default_factory=EmojiExpressionConfig)
     constraints: EmojiGlobalConstraintConfig = field(default_factory=EmojiGlobalConstraintConfig)
     database: EmojiDatabaseConfig = field(default_factory=EmojiDatabaseConfig)

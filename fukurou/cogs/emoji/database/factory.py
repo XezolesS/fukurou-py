@@ -1,20 +1,33 @@
-from .base import BaseEmojiDatabase
-from .sqlite import EmojiSqlite
+from typing import TypeVar
 
-def get_emoji_database(dbtype: str) -> BaseEmojiDatabase:
+from fukurou.cogs.emoji.config import EmojiConfig
+from fukurou.cogs.emoji.database.base import BaseEmojiDatabase
+from fukurou.cogs.emoji.database.sqlite import EmojiSqlite
+
+EmojiDatabase = TypeVar('EmojiDatabase', bound=BaseEmojiDatabase)
+
+def get_emoji_database(config: EmojiConfig) -> EmojiDatabase:
     """
     Get a database connector for the Emoji.
 
-    :param dbtype: Type of the database in string.
-    :type dbtype: str
+    Parameters
+    ----------
+    config : EmojiConfig
+        Config instance
 
-    :return: Database connector.
-    :rtype: BaseEmojiDatabase
+    Returns
+    -------
+    EmojiDatabase
+        Database instance built by the config
 
-    :raises ValueError: If the `dbtype` is invalid database.
+    Raises
+    ------
+    ValueError
+        If database type is invalid
     """
-    match dbtype:
+    match config.database.type.lower():
         case 'sqlite':
-            return EmojiSqlite()
+            return EmojiSqlite(config)
 
-    raise ValueError('There is no such database', dbtype)
+    # TODO: Error logging?
+    raise ValueError('There is no such database', config.database.type)

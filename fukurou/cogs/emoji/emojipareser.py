@@ -1,25 +1,22 @@
 import re
 
-from fukurou.configs import get_config
-from .config import EmojiConfig
+from fukurou.cogs.emoji.config import EmojiConfig
 
 class EmojiParser:
-    @classmethod
-    def match(cls, text: str) -> bool:
-        config: EmojiConfig = get_config(config=EmojiConfig)
-        return re.match(config.expression.pattern, text) is not None
+    def __init__(self, config: EmojiConfig):
+        self.pattern = config.expression.pattern
+        self.opening = config.expression.opening
+        self.closing = config.expression.closing
 
-    @classmethod
-    def parse(cls, text: str) -> str | None:
-        if not EmojiParser.match(text=text):
+    def match(self, text: str) -> bool:
+        return re.match(self.pattern, text) is not None
+
+    def parse(self, text: str) -> str | None:
+        if not self.match(text=text):
             return None
 
-        config: EmojiConfig = get_config(config=EmojiConfig)
-        opening = config.expression.opening
-        closing = config.expression.closing
-
         parsed = text
-        parsed = re.sub(f'^{opening}', '', parsed, 1)
-        parsed = re.sub(f'{closing}$', '', parsed, 1)
+        parsed = re.sub(f'^{self.opening}', '', parsed, 1)
+        parsed = re.sub(f'{self.closing}$', '', parsed, 1)
 
         return parsed

@@ -1,20 +1,33 @@
-from .base import BaseEmojiStorage
-from .local import LocalEmojiStorage
+from typing import TypeVar
 
-def get_emoji_storage(sttype: str) -> BaseEmojiStorage:
+from fukurou.cogs.emoji.config import EmojiConfig
+from fukurou.cogs.emoji.storage.base import BaseEmojiStorage
+from fukurou.cogs.emoji.storage.local import LocalEmojiStorage
+
+EmojiStorage = TypeVar('EmojiStorage', bound=BaseEmojiStorage)
+
+def get_emoji_storage(config: EmojiConfig) -> EmojiStorage:
     """
     Get an image storage controller for the Emoji.
 
-    :param sttype: Type of the storage in string.
-    :type sttype: str
+    Parameters
+    ----------
+    config : EmojiConfig
+        Config instance
 
-    :return: Image storage IO controller.
-    :rtype: BaseEmojiStorage
+    Returns
+    -------
+    EmojiStorage
+        EmojiStorage instance built by the config
 
-    :raises ValueError: If the `sttype` is invalid storage.
+    Raises
+    ------
+    ValueError
+        If storage type is invalid
     """
-    match sttype:
+    match config.storage.type.lower():
         case 'local':
-            return LocalEmojiStorage()
+            return LocalEmojiStorage(config)
 
-    raise ValueError('There is no such storage', sttype)
+    # TODO: Error logging?
+    raise ValueError('There is no such storage', config.storage.type)

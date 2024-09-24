@@ -4,9 +4,11 @@ import logging
 import discord
 from discord.ext import commands
 
-from .emojimanager import EmojiManager
-from .emojipareser import EmojiParser
-from .views import (
+from fukurou.configs import Configurable
+from fukurou.cogs.emoji.config import EmojiConfig
+from fukurou.cogs.emoji.emojimanager import EmojiManager
+from fukurou.cogs.emoji.emojipareser import EmojiParser
+from fukurou.cogs.emoji.views import (
     EmojiEmbed,
     EmojiErrorEmbed,
     EmojiListPage
@@ -18,7 +20,7 @@ def emoji_managable():
         return ctx.channel.permissions_for(ctx.author).manage_emojis
     return commands.check(predicate=predicate)
 
-class EmojiCog(commands.Cog):
+class EmojiCog(commands.Cog, Configurable):
     emoji_commands = discord.SlashCommandGroup(
         name='emoji',
         description='Command group for managing custom emoji.',
@@ -26,8 +28,13 @@ class EmojiCog(commands.Cog):
     )
 
     def __init__(self, bot):
+        self.init_config(EmojiConfig)
+
         self.bot = bot
+        self.config: EmojiConfig = self.get_config(EmojiConfig)
         self.logger = logging.getLogger('fukurou.emoji')
+        self.manager = EmojiManager(self.config)
+        self.parser = EmojiParser(self.config)
 
     @emoji_commands.command(
         name='add',
@@ -53,7 +60,7 @@ class EmojiCog(commands.Cog):
         # This task can take longer than 3 seconds
         await ctx.defer(ephemeral=True)
 
-        await EmojiManager().add(
+        await self.manager.add(
             guild_id=ctx.guild.id,
             uploader=ctx.author.id,
             emoji_name=name,
@@ -83,7 +90,7 @@ class EmojiCog(commands.Cog):
     async def delete(self,
                      ctx: discord.ApplicationContext,
                      name: str):
-        EmojiManager().delete(guild_id=ctx.guild.id, emoji_name=name)
+        self.manager.delete(guild_id=ctx.guild.id, emoji_name=name)
 
         await ctx.respond(
             embed=EmojiEmbed(description=f'**{name}** has been deleted!')
@@ -110,17 +117,17 @@ class EmojiCog(commands.Cog):
                      ctx: discord.ApplicationContext,
                      old_name: str,
                      new_name: str):
-        EmojiManager().rename(
+        self.manager.rename(
             guild_id=ctx.guild.id,
             old_name=old_name,
             new_name=new_name
         )
 
-        emoji = EmojiManager().get(guild_id=ctx.guild.id, emoji_name=new_name)
+        emoji = self.manager.get(guild_id=ctx.guild.id, emoji_name=new_name)
 
         await ctx.respond(
             file=discord.File(
-                fp=EmojiManager().get_file_loc(guild_id=ctx.guild.id, emoji=emoji),
+                fp=self.manager.get_file_loc(guild_id=ctx.guild.id, emoji=emoji),
                 filename=emoji.file_name
             ),
             embed=EmojiEmbed(
@@ -154,7 +161,7 @@ class EmojiCog(commands.Cog):
         # This task can take longer than 3 seconds
         await ctx.defer(ephemeral=True)
 
-        await EmojiManager().replace(
+        await self.manager.replace(
             guild_id=ctx.guild.id,
             uploader=ctx.author.id,
             emoji_name=name,
@@ -181,7 +188,7 @@ class EmojiCog(commands.Cog):
         required=False
     )
     async def list(self, ctx: discord.ApplicationContext, keyword: str):
-        emoji_list = EmojiManager().list(
+        emoji_list = self.manager.list(
             user_id=ctx.author.id,
             guild_id=ctx.guild.id,
             keyword=keyword
@@ -207,11 +214,11 @@ class EmojiCog(commands.Cog):
         if message.author.id == self.bot.user.id:
             return
 
-        emoji_name = EmojiParser.parse(text=message.content)
+        emoji_name = self.parser.parse(text=message.content)
         if emoji_name is None:
             return
 
-        emoji = EmojiManager().get(guild_id=message.guild.id, emoji_name=emoji_name)
+        emoji = self.manager.get(guild_id=message.guild.id, emoji_name=emoji_name)
         if emoji is None:
             return
 
@@ -224,7 +231,7 @@ class EmojiCog(commands.Cog):
                 username=message.author.display_name,
                 avatar_url=message.author.display_avatar.url,
                 file=discord.File(
-                    fp=EmojiManager().get_file_loc(guild_id=message.guild.id, emoji=emoji),
+                    fp=self.manager.get_file_loc(guild_id=message.guild.id, emoji=emoji),
                     filename=emoji.file_name
                 )
             )
@@ -234,7 +241,7 @@ class EmojiCog(commands.Cog):
             # Send embedded Emoji when there's no permission to create webhook.
             await message.channel.send(
                 file=discord.File(
-                    fp=EmojiManager().get_file_loc(guild_id=message.guild.id, emoji=emoji),
+                    fp=self.manager.get_file_loc(guild_id=message.guild.id, emoji=emoji),
                     filename=emoji.file_name
                 ),
                 embed=EmojiEmbed(
@@ -246,7 +253,7 @@ class EmojiCog(commands.Cog):
             self.logger.error('Cannot send emoji to the user(%d): %s', message.author.id, e.args)
         else:
             # Increase usecount when sending emoji succeed
-            EmojiManager().increase_usecount(
+            self.manager.increase_usecount(
                 guild_id=message.guild.id,
                 user_id=message.author.id,
                 emoji_name=emoji_name
@@ -255,11 +262,11 @@ class EmojiCog(commands.Cog):
     @commands.Cog.listener('on_ready')
     async def load_guild_emoji(self):
         for guild in self.bot.guilds:
-            EmojiManager().register(guild_id=guild.id)
+            self.manager.register(guild_id=guild.id)
 
     @commands.Cog.listener('on_guild_join')
     async def init_guild_emoji(self, guild: discord.Guild):
-        EmojiManager().register(guild_id=guild.id)
+        self.manager.register(guild_id=guild.id)
 
     async def cog_command_error(self, ctx: discord.ApplicationContext, error: Any):
         try:
