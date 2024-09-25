@@ -6,19 +6,14 @@ import os
 import logging
 import json
 from abc import ABC, abstractmethod
-from typing import (
-    Any,
-    TypeVar
-)
-from dataclasses import asdict
+from typing import Any
+import dataclasses
 
 __all__ = [
     'Config',
     'Configurable',
     'NewConfigInterrupt'
 ]
-
-ConfigT = TypeVar("ConfigT", bound="Config")
 
 FUKUROU_CONFIG_DIR = 'configs/'
 
@@ -43,7 +38,7 @@ class Config(ABC):
     @classmethod
     @abstractmethod
     def from_dict(cls, json_obj: dict[Any]) -> Config:
-        raise NotImplementedError
+        pass
 
 class Configurable:
     """
@@ -53,9 +48,9 @@ class Configurable:
     (user-written class that inherited from the :class:`Config`) 
     after initialzation. (via calling :meth:`init_config()`)
     """
-    __configs: dict[ConfigT, Config] = {}
+    __configs: dict[type[Config], Config] = {}
 
-    def init_config(self, config: ConfigT, interrupt_new: bool = False) -> None:
+    def init_config(self, config: type[Config], interrupt_new: bool = False) -> None:
         """
         Initialize config.
         It will read config file if it exists. Otherwise, create new one with default values.
@@ -74,8 +69,8 @@ class Configurable:
 
         Parameters
         ----------
-        config : ConfigT
-            The type of the config. It must be inherited from :class:`BaseConfig`
+        config : type[Config]
+            The type of the config. It must be inherited from :class:`Config`
         interrupt_new : bool, optional
             If it's set to True, :class:`NewConfigInterrupt` will be raised if a new 
             config is created. Set to False by default
@@ -103,7 +98,7 @@ class Configurable:
                 content = file.read()
         except FileNotFoundError as e:
             # Write a default config if it's not exist.
-            content = json.dumps(asdict(config()), indent=2)
+            content = json.dumps(dataclasses.asdict(config()), indent=2)
 
             with open(path, mode='w', encoding='utf8') as file:
                 file.write(content)
@@ -114,14 +109,14 @@ class Configurable:
         # Register to a config map
         self.__configs[config] = config.from_dict(json.loads(content))
 
-    def get_config(self, config: ConfigT) -> Config | None:
+    def get_config(self, config: type[Config]) -> Config | None:
         """
         Get config object.
 
         Parameters
         ----------
-        config : ConfigT
-            The type of the config. It must be inherited from :class:`BaseConfig`
+        config : type[Config]
+            The type of the config. It must be inherited from :class:`Config`
 
         Returns
         -------
@@ -133,13 +128,13 @@ class Configurable:
         except KeyError:
             return None
 
-    def remove_config(self, config: ConfigT) -> None:
+    def remove_config(self, config: type[Config]) -> None:
         """
         Remove config.
 
         Parameters
         ----------
-        config : ConfigT
+        config : type[Config]
             The type of the config. It must be inherited from :class:`BaseConfig`
         """
         try:
