@@ -58,11 +58,3 @@ class BotConfig(Config):
     @classmethod
     def get_file_name(cls) -> str:
         return 'fukurou.json'
-
-    @classmethod
-    def from_dict(cls, json_obj: dict[Any]) -> BotConfig:
-        return BotConfig(
-            token=json_obj['token'],
-            extensions=json_obj['extensions'],
-            logging=json_obj['logging']
-        )

@@ -3,10 +3,10 @@ A module for managing system configs of fukurou and its cogs.
 """
 from __future__ import annotations
 import os
-import logging
 import json
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any
+import inspect
 import dataclasses
 
 __all__ = [
@@ -23,22 +23,27 @@ class NewConfigInterrupt(BaseException):
     """
 
 class Config(ABC):
-    """
-    The base class that all configs must inherit from.
-
-    The config is a `dataclasses.dataclass` and will be saved as a json file.
-
-    To create a config class, you should decorate the class with 
-    the `dataclasess.dataclass` and add fields an their default values.
-    """
     @classmethod
     def get_file_name(cls) -> str | None:
         return None
 
     @classmethod
-    @abstractmethod
     def from_dict(cls, json_obj: dict[Any]) -> Config:
-        pass
+        params = {}
+        for field in dataclasses.fields(cls):
+            key = field.name
+
+            if inspect.isclass(field.default_factory):
+                if issubclass(field.default_factory, Config):
+                    value = field.default_factory.from_dict(json_obj[key])
+                else:
+                    value = field.default_factory(json_obj[key])
+            else:
+                value = json_obj[key]
+
+            params[key] = value
+
+        return cls(**params)
 
 class Configurable:
     """
