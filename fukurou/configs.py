@@ -2,12 +2,13 @@
 A module for managing system configs of fukurou and its cogs.
 """
 from __future__ import annotations
-import os
 import json
-from abc import ABC
-from typing import Any
 import inspect
 import dataclasses
+
+from abc import ABC
+from pathlib import Path
+from typing import Any
 
 __all__ = [
     'Config',
@@ -15,7 +16,7 @@ __all__ = [
     'NewConfigInterrupt'
 ]
 
-FUKUROU_CONFIG_DIR = 'configs/'
+FUKUROU_CONFIG_DIR = Path('configs/')
 
 class NewConfigInterrupt(BaseException):
     """
@@ -95,8 +96,8 @@ class Configurable:
             return
 
         # Load config
-        os.makedirs(FUKUROU_CONFIG_DIR, exist_ok=True)
-        path = os.path.join(FUKUROU_CONFIG_DIR, config.get_file_name())
+        FUKUROU_CONFIG_DIR.mkdir(exist_ok=True)
+        path = FUKUROU_CONFIG_DIR.joinpath(config.get_file_name())
 
         try:
             with open(path, mode='r', encoding='utf8') as file:
