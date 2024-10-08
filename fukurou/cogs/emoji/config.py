@@ -47,6 +47,7 @@ class EmojiConstraintsConfig(Config):
             try:
                 constraints[int(guild_id)] = constraint
             except ValueError:
+                # TODO: warning log?
                 pass    # Ignore ValueError
 
         return EmojiConstraintsConfig(
@@ -70,12 +71,8 @@ class EmojiStorageConfig(Config):
     directory: str = './images'
 
 @dataclass
-class EmojiConfig(Config):
+class EmojiConfig(Config, filename='emoji.json'):
     expression: EmojiExpressionConfig = field(default_factory=EmojiExpressionConfig)
     constraints: EmojiConstraintsConfig = field(default_factory=EmojiConstraintsConfig)
     database: EmojiDatabaseConfig = field(default_factory=EmojiDatabaseConfig)
     storage: EmojiStorageConfig = field(default_factory=EmojiStorageConfig)
-
-    @classmethod
-    def get_file_name(cls) -> str:
-        return 'emoji.json'

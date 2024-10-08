@@ -49,12 +49,7 @@ DEFAULT_LOGGING_CONFIG = {
 }
 
 @dataclass
-class BotConfig(Config):
-    #pylint: disable=no-self-argument
+class BotConfig(Config, filename='fukurou.json'):
     token: str = 'INSERT_TOKEN'
     extensions: list[str] = field(default_factory=list)
     logging: dict = field(default_factory=lambda: DEFAULT_LOGGING_CONFIG)
-
-    @classmethod
-    def get_file_name(cls) -> str:
-        return 'fukurou.json'

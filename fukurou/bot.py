@@ -5,9 +5,9 @@ import discord
 from discord.ext.commands import Bot
 
 from fukurou.bot_config import BotConfig
-from fukurou.configs import Configurable
+from fukurou.configs import ConfigMixin
 
-class FukurouBot(Bot, Configurable):
+class FukurouBot(Bot, ConfigMixin):
     def __init__(self):
         self.init_config(BotConfig, interrupt_new=True)
 

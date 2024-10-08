@@ -2,17 +2,17 @@
 A module for managing system configs of fukurou and its cogs.
 """
 from __future__ import annotations
+import os
 import json
 import inspect
 import dataclasses
 
-from abc import ABC
 from pathlib import Path
-from typing import Any
+from typing import Any, Union, Optional
 
 __all__ = [
     'Config',
-    'Configurable',
+    'ConfigMixin',
     'NewConfigInterrupt'
 ]
 
@@ -23,12 +23,18 @@ class NewConfigInterrupt(BaseException):
     Raised when a new config has been created.
     """
 
-class Config(ABC):
-    @classmethod
-    def get_file_name(cls) -> str | None:
-        return None
+class ConfigMeta(type):
+    def __new__(mcs: type[ConfigMeta],
+                name: str,
+                bases: tuple[type, ...],
+                namespace: dict[str, Any],
+                filename: Optional[Union[str, bytes, os.PathLike]] = None,
+                **kwargs: Any) -> ConfigMeta:
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        cls.filename = filename
 
-    @classmethod
+        return cls
+
     def from_dict(cls, json_obj: dict[Any]) -> Config:
         params = {}
         for field in dataclasses.fields(cls):
@@ -46,7 +52,10 @@ class Config(ABC):
 
         return cls(**params)
 
-class Configurable:
+class Config(metaclass=ConfigMeta):
+    filename = None
+
+class ConfigMixin:
     """
     The mixin class to add config functionalities to the class.
 
@@ -88,7 +97,7 @@ class Configurable:
         NewConfigInterrupt
             If a new config is created
         """
-        if not issubclass(config, Config):
+        if not _is_config(config):
             raise TypeError('must be inherted from Config.')
 
         if config in self.__configs:
@@ -97,7 +106,7 @@ class Configurable:
 
         # Load config
         FUKUROU_CONFIG_DIR.mkdir(exist_ok=True)
-        path = FUKUROU_CONFIG_DIR.joinpath(config.get_file_name())
+        path = FUKUROU_CONFIG_DIR.joinpath(config.filename)
 
         try:
             with open(path, mode='r', encoding='utf8') as file:
@@ -147,3 +156,17 @@ class Configurable:
             self.__configs.pop(config)
         except KeyError:
             pass
+
+# TODO: should be public?
+def _is_config(cls: Any) -> bool:
+    if not issubclass(cls, Config):
+        return False
+
+    if not dataclasses.is_dataclass(cls):
+        return False
+
+    for field in dataclasses.fields(cls):
+        if field.default is dataclasses.MISSING and field.default_factory is dataclasses.MISSING:
+            return False
+
+    return True
