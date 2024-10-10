@@ -12,7 +12,7 @@ from typing import Any, Union, Optional
 
 __all__ = [
     'Config',
-    'ConfigMixin',
+    'ConfigMeta',
     'NewConfigInterrupt'
 ]
 
@@ -35,13 +35,23 @@ class ConfigMeta(type):
 
         return cls
 
+    def __subclasscheck__(cls, subclass: type) -> bool:
+        if cls is not Config:
+            return super().__subclasscheck__(subclass)
+
+        return subclass.__class__ is ConfigMeta
+
     def from_dict(cls, json_obj: dict[Any]) -> Config:
         params = {}
         for field in dataclasses.fields(cls):
             key = field.name
 
+            # TODO: more cleaner code? and comments
             if inspect.isclass(field.default_factory):
                 if issubclass(field.default_factory, Config):
+                    if not _is_config(field.default_factory):
+                        raise TypeError('invalid config type.')
+
                     value = field.default_factory.from_dict(json_obj[key])
                 else:
                     value = field.default_factory(json_obj[key])
@@ -57,13 +67,11 @@ class Config(metaclass=ConfigMeta):
 
 class ConfigMixin:
     """
-    The mixin class to add config functionalities to the class.
-
-    The class using this mixin can access to the Config
-    (user-written class that inherited from the :class:`Config`) 
-    after initialzation. (via calling :meth:`init_config()`)
+    The mixin class to add config functionalities to the bot.
     """
-    __configs: dict[type[Config], Config] = {}
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__configs: dict[type[Config], Config] = {}
 
     def init_config(self, config: type[Config], interrupt_new: bool = False) -> None:
         """
@@ -98,7 +106,7 @@ class ConfigMixin:
             If a new config is created
         """
         if not _is_config(config):
-            raise TypeError('must be inherted from Config.')
+            raise TypeError('invalid config type.')
 
         if config in self.__configs:
             # self.logger.warning('%s is already added.', config.__name__)

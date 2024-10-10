@@ -4,7 +4,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from fukurou.configs import ConfigMixin
+from fukurou.bot import FukurouBot
 from fukurou.cogs.emoji.config import EmojiConfig
 from fukurou.cogs.emoji.emojimanager import EmojiManager
 from fukurou.cogs.emoji.emojipareser import EmojiParser
@@ -20,18 +20,18 @@ def emoji_managable():
         return ctx.channel.permissions_for(ctx.author).manage_emojis
     return commands.check(predicate=predicate)
 
-class EmojiCog(commands.Cog, ConfigMixin):
+class EmojiCog(commands.Cog):
     emoji_commands = discord.SlashCommandGroup(
         name='emoji',
         description='Command group for managing custom emoji.',
         guild_only=True
     )
 
-    def __init__(self, bot):
-        self.init_config(EmojiConfig)
+    def __init__(self, bot: FukurouBot):
+        bot.init_config(EmojiConfig)
 
         self.bot = bot
-        self.config: EmojiConfig = self.get_config(EmojiConfig)
+        self.config: EmojiConfig = bot.get_config(EmojiConfig)
         self.logger = logging.getLogger('fukurou.emoji')
         self.manager = EmojiManager(self.config)
         self.parser = EmojiParser(self.config)

@@ -1,14 +1,16 @@
 import logging
 import logging.config
-from typing import Type
 import discord
+
 from discord.ext.commands import Bot
 
 from fukurou.bot_config import BotConfig
 from fukurou.configs import ConfigMixin
 
-class FukurouBot(Bot, ConfigMixin):
-    def __init__(self):
+class FukurouBot(ConfigMixin, Bot):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
         self.init_config(BotConfig, interrupt_new=True)
 
         self.config: BotConfig = self.get_config(BotConfig)
