@@ -4,7 +4,6 @@ A module for managing system configs of fukurou and its cogs.
 from __future__ import annotations
 import os
 import json
-import inspect
 import dataclasses
 
 from pathlib import Path
