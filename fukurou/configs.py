@@ -8,7 +8,7 @@ import inspect
 import dataclasses
 
 from pathlib import Path
-from typing import Any, Union, Optional
+from typing import Any, Union, Optional, get_type_hints
 
 __all__ = [
     'Config',
@@ -21,6 +21,17 @@ FUKUROU_CONFIG_DIR = Path('configs/')
 class NewConfigInterrupt(BaseException):
     """
     Raised when a new config has been created.
+    """
+
+class InvalidConfigError(BaseException):
+    """
+    Raised when the config is not valid.
+
+    Details:
+    - The config is not inherited from :class:`Config`, or
+    doesn't have :class:`ConfigMeta` metaclass.
+    - The config is not a dataclass.
+    - Some of the fields in the config have no default value.
     """
 
 class ConfigMeta(type):
@@ -43,21 +54,19 @@ class ConfigMeta(type):
 
     def from_dict(cls, json_obj: dict[Any]) -> Config:
         params = {}
+        types = get_type_hints(cls)
         for field in dataclasses.fields(cls):
             key = field.name
+            fieldtype = types[key]
 
-            if inspect.isclass(field.default_factory):
-                if issubclass(field.default_factory, Config):
-                    if not is_config(field.default_factory):
-                        raise TypeError('invalid config type.')
+            if issubclass(fieldtype, Config):
+                # Validate the config
+                if not is_config(fieldtype):
+                    raise InvalidConfigError('invalid config', fieldtype)
 
-                    value = field.default_factory.from_dict(json_obj[key])
-                else:
-                    value = field.default_factory(json_obj[key])
+                params[key] = fieldtype.from_dict(json_obj[key])
             else:
-                value = json_obj[key]
-
-            params[key] = value
+                params[key] = json_obj[key]
 
         return cls(**params)
 
@@ -97,20 +106,20 @@ class ConfigMixin:
         Parameters
         ----------
         config : type[Config]
-            The type of the config. It must be inherited from :class:`Config`
+            The type of the config. It must be inherited from :class:`Config`.
         interrupt_new : bool, optional
             If it's set to True, :class:`NewConfigInterrupt` will be raised
-            if a new config is created. Set to False by default
+            if a new config is created. Set to False by default.
 
         Raises
         ------
         TypeError
-            If reading a config or writing a new config is failed
+            If reading a config or writing a new config is failed.
         NewConfigInterrupt
-            If a new config is created
+            If a new config is created.
         """
         if not is_config(config):
-            raise TypeError('invalid config type.')
+            raise InvalidConfigError('invalid config', config)
 
         if config in self.__configs:
             # self.logger.warning('%s is already added.', config.__name__)
@@ -174,19 +183,19 @@ def is_config(cls: type) -> bool:
     Check if the class is a config.
 
     The config class should:
-    - inherit :class:`Config` or have :class:`ConfigMeta` metaclass
-    - decorated with :func:`@dataclass` (be a dataclass)
+    - inherit :class:`Config` or have :class:`ConfigMeta` metaclass.
+    - decorated with :func:`dataclass`. (be a dataclass)
     - have fields with default values.
 
     Parameters
     ----------
     cls : type
-        Class to be checked
+        Class to be checked.
 
     Returns
     -------
     bool
-        `True` if it's a config, `False` otherwise
+        `True` if it's a config, `False` otherwise.
     """
     if not issubclass(cls, Config):
         return False
