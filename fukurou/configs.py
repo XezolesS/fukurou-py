@@ -46,10 +46,9 @@ class ConfigMeta(type):
         for field in dataclasses.fields(cls):
             key = field.name
 
-            # TODO: more cleaner code? and comments
             if inspect.isclass(field.default_factory):
                 if issubclass(field.default_factory, Config):
-                    if not _is_config(field.default_factory):
+                    if not is_config(field.default_factory):
                         raise TypeError('invalid config type.')
 
                     value = field.default_factory.from_dict(json_obj[key])
@@ -63,6 +62,9 @@ class ConfigMeta(type):
         return cls(**params)
 
 class Config(metaclass=ConfigMeta):
+    """
+    Helper class of :class:`ConfigMeta`.
+    """
     filename = None
 
 class ConfigMixin:
@@ -76,27 +78,29 @@ class ConfigMixin:
     def init_config(self, config: type[Config], interrupt_new: bool = False) -> None:
         """
         Initialize config.
-        It will read config file if it exists. Otherwise, create new one with default values.
-        You can access to the config through :meth:`get_config()` after initialization.
+        It will read config file if it exists. Otherwise, create new one 
+        with default values. You can access to the config through 
+        :meth:`get_config()` after initialization.
 
         It will be ignored when the config is already loaded.
 
         It will read a certain file under the directory `./config/`. 
-        If there's no such config found, create a new config with default options. 
+        If there's no such config found, create a new config with
+        default options. 
 
-        If `interrupt_new` is set to True, `NewConfigInterrupt` will be 
+        If `interrupt_new` is set to `True`, `NewConfigInterrupt` will be 
         raised if a new config is created.
 
-        `IOError` will be raised if something goes wrong while reading a config 
-        or writing a new config.
+        `IOError` will be raised if something goes wrong while reading or
+        writing a new config.
 
         Parameters
         ----------
         config : type[Config]
             The type of the config. It must be inherited from :class:`Config`
         interrupt_new : bool, optional
-            If it's set to True, :class:`NewConfigInterrupt` will be raised if a new 
-            config is created. Set to False by default
+            If it's set to True, :class:`NewConfigInterrupt` will be raised
+            if a new config is created. Set to False by default
 
         Raises
         ------
@@ -105,7 +109,7 @@ class ConfigMixin:
         NewConfigInterrupt
             If a new config is created
         """
-        if not _is_config(config):
+        if not is_config(config):
             raise TypeError('invalid config type.')
 
         if config in self.__configs:
@@ -165,8 +169,25 @@ class ConfigMixin:
         except KeyError:
             pass
 
-# TODO: should be public?
-def _is_config(cls: Any) -> bool:
+def is_config(cls: type) -> bool:
+    """
+    Check if the class is a config.
+
+    The config class should:
+    - inherit :class:`Config` or have :class:`ConfigMeta` metaclass
+    - decorated with :func:`@dataclass` (be a dataclass)
+    - have fields with default values.
+
+    Parameters
+    ----------
+    cls : type
+        Class to be checked
+
+    Returns
+    -------
+    bool
+        `True` if it's a config, `False` otherwise
+    """
     if not issubclass(cls, Config):
         return False
 
