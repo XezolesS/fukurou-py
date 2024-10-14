@@ -9,7 +9,8 @@ from fukurou.configs import ConfigMixin
 
 class FukurouBot(ConfigMixin, Bot):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        # Initialize every super classes but the Bot.
+        ConfigMixin.__init__(self, *args, **kwargs)
 
         self.init_config(BotConfig, interrupt_new=True)
 
@@ -22,9 +23,10 @@ class FukurouBot(ConfigMixin, Bot):
         intents.message_content = True
         intents.members = True
 
-        super().__init__(
+        Bot.__init__(
+            self,
             intents = intents,
-            command_prefix = '!'
+            command_prefix = '!',
         )
 
     def run(self) -> None:

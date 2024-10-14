@@ -2,6 +2,7 @@
 A module for managing system configs of fukurou and its cogs.
 """
 from __future__ import annotations
+
 import os
 import json
 import dataclasses
@@ -15,7 +16,7 @@ __all__ = [
     'NewConfigInterrupt'
 ]
 
-FUKUROU_CONFIG_DIR = Path('configs/')
+FUKUROU_CONFIG_DIR = Path('./configs/')
 
 class NewConfigInterrupt(BaseException):
     """
